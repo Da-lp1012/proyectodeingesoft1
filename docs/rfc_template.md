@@ -15,6 +15,7 @@ párrafo corto que explica qué estas proponiendo
 ¿qué motiva esta decisión y por qué es importante?
 el propósito de esta sección es articular de una manera sencilla el valor de la decision que vamos a tomar
 -->
+- Una de las principales motivaciones para desarrollar el proyecto consiste en fomentar el aprendizaje colaborativo orientado a iniciar al estudiante a un entorno empresarial realista, en el cual el trabajo en equipo es fundamental. A pesar de su importancia, en muchas ocasiones el estudiante nunca aprende a trabajar con otras personas de manera efectiva, lo que limita significativamente sus oportunidades al graduarse. 
 
 ## 3 Propuesta de implementación
 
