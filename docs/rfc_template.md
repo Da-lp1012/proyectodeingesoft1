@@ -1,16 +1,24 @@
 # Título (lee el source code del markdown para ver los comentarios)
 
 Autores:
- - @githubusername
+ - @Silvana Ramirez Ardila
+ - @David Esteban Raigosa Socha
+ - @Deisy Viviana Lara Sisa
+ - @Fredy Humberto Garzon Salgado
+ - @Hare Zeyiukuin Atehortua Rincon
+   
+
 
 ## 1 TL;DR
 
+La importancia de la agilidad y la eficiencia en un grupo de trabajo, y como influye esto en la institución y sus trabajadores.
 <!--
 párrafo corto que explica qué estas proponiendo
 -->
 
 ## 2 Motivación
 
+*Importancia:* Si un trabajador debería requerir *20* Horas de trabajo efectivo, un grupo desorganizado podría terminar gastando 25-35 horas o incluso mas, lo que significa carga de trabajo extra  para todas las personas del equipo ya sea esperando respuestas, corrigiendo errores, buscando archivos, generando perdidas para todos y normalmente ni siquiera significa que el  trabajo sea mas difícil si no que el grupo termina trabajando el doble para conseguir el mismo resultado.
 <!--
 ¿qué motiva esta decisión y por qué es importante?
 el propósito de esta sección es articular de una manera sencilla el valor de la decision que vamos a tomar
