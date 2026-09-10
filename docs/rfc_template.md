@@ -15,6 +15,7 @@ párrafo corto que explica qué estas proponiendo
 ¿qué motiva esta decisión y por qué es importante?
 el propósito de esta sección es articular de una manera sencilla el valor de la decision que vamos a tomar
 -->
+-Nos motiva nuestra propia experiencia al trabajar en grupo ya que notamos varios inconvenientes que ahora tenemos la posibilidad de solucionar, y así, ayudar a las personas que puedan estar pasando por situaciones similares. Por otro lado, tenemos la oportunidad de producir este proyecto con nuevas metodologías de trabajo en equipo que nos emociona implementar. Con *Slackless* podemos explorar y aplicar nuevos conceptos de ingeniería de software y relacionarlos con conocimiento actual, permitiéndonos crecer como ingenieros de sistemas. El proyecto no solo nos beneficia a nosotros, beneficia a toda la comunidad.
 
 ## 3 Propuesta de implementación
 
