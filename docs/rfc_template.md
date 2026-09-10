@@ -1,7 +1,7 @@
 # Título (lee el source code del markdown para ver los comentarios)
 
 Autores:
- - @githubusername
+ - @Da-lp1012
 
 ## 1 TL;DR
 
@@ -13,7 +13,7 @@ párrafo corto que explica qué estas proponiendo
 
 <!--
 ¿qué motiva esta decisión y por qué es importante?
-el propósito de esta sección es articular de una manera sencilla el valor de la decision que vamos a tomar
+En la universidad y en el mundo laboral es indispensable trabajar en equipo, vemos necesaria una herramienta de productividad de trabajo en equipo. Hemos notado que se necesitan herramientas mas minimalistas, que favorezcan la documentación de trabajo y faciliten el seguimiento de progreso de las actividades cuales quieran que se desarrollen en equipo, es importante por que normalmente lo que desarrolle yo va a afectar lo que desarrolle mi compañero de trabajo y en este tipo de situaciones si no hay una buena planificación y un buen seguimiento se afecta el proyecto y el correcto funcionamiento del equipo y/o de la empresa
 -->
 
 ## 3 Propuesta de implementación
