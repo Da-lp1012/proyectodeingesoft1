@@ -15,7 +15,7 @@ párrafo corto que explica qué estas proponiendo
 ¿qué motiva esta decisión y por qué es importante?
 el propósito de esta sección es articular de una manera sencilla el valor de la decision que vamos a tomar
 -->
-
+-Nos motiva nuestra propia experiencia al trabajar en grupo ya que notamos varios inconvenientes que ahora tenemos la posibilidad de solucionar, y así, ayudar a las personas que puedan estar pasando por situaciones similares, además, al hacer este proyecto podemos explorar y aplicar nuevos conceptos de ingeniería de software y relacionarlos con conocimiento actual, permitiéndonos crecer como ingenieros de sistemas. El proyecto no solo nos beneficia a nosotros, es para ayudar a la comunidad . 
 ## 3 Propuesta de implementación
 
 <!--
