@@ -1,14 +1,14 @@
 # Título (lee el source code del markdown para ver los comentarios)
 
 Autores:
- - @githubusername
+ - @FredyG112005
 
 ## 1 TL;DR
 
 <!--
 párrafo corto que explica qué estas proponiendo
 -->
-
+Este proyecto cobra importancia en cuanto a la gestión de proyectos en equipos de trabajo donde se presentan diferentes situaciones donde se deben tomar desiciones y es donde ocurren falencias como: falta de comunicacion, distribucion de roles y asignacion de tareas, plazos de entrega, entre otros. Es aqui donde existen diferentes aplicaciones que ya hacen esta gestion; pero fallan en cuanto a ser intuitivas y amigables con el usuario, donde estas sean mas visuales y permitan que el usuario no se sature de muchos comandos y funciones que no entiende.
 ## 2 Motivación
 
 <!--
