@@ -1,7 +1,7 @@
 # Título (lee el source code del markdown para ver los comentarios)
 
 Autores:
- - @githubusername
+ - @FredyG112005
 
 ## 1 TL;DR
 
