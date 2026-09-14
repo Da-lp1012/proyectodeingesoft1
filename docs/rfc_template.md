@@ -15,6 +15,7 @@ párrafo corto que explica qué estas proponiendo
 ¿qué motiva esta decisión y por qué es importante?
 En la universidad y en el mundo laboral es indispensable trabajar en equipo, vemos necesaria una herramienta de productividad de trabajo en equipo. Hemos notado que se necesitan herramientas mas minimalistas, que favorezcan la documentación de trabajo y faciliten el seguimiento de progreso de las actividades cuales quieran que se desarrollen en equipo, es importante por que normalmente lo que desarrolle yo va a afectar lo que desarrolle mi compañero de trabajo y en este tipo de situaciones si no hay una buena planificación y un buen seguimiento se afecta el proyecto y el correcto funcionamiento del equipo y/o de la empresa
 -->
+-Nos motiva nuestra propia experiencia al trabajar en grupo ya que notamos varios inconvenientes que ahora tenemos la posibilidad de solucionar, y así, ayudar a las personas que puedan estar pasando por situaciones similares. Por otro lado, tenemos la oportunidad de producir este proyecto con nuevas metodologías de trabajo en equipo que nos emociona implementar. Con *Slackless* podemos explorar y aplicar nuevos conceptos de ingeniería de software y relacionarlos con conocimiento actual, permitiéndonos crecer como ingenieros de sistemas. El proyecto no solo nos beneficia a nosotros, beneficia a toda la comunidad.
 
 ## 3 Propuesta de implementación
 
