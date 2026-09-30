@@ -2,12 +2,11 @@
 
 * **Estatus:** Aceptado
 * **Fecha:** 2026-09-16
-* **Autores:** 
-David Esteban Raigosa Socha
-Deisy Viviana Lara Sisa
-Hare Zeiyiukuin Atehortua Rincon
-Fredy Humberto Garzon Salgado
-Silvana Ramirez Ardila
+* **Autores:** David Esteban Raigosa Socha  
+&emsp; &emsp; &ensp; &nbsp; Deisy Viviana Lara Sisa  
+&emsp; &emsp; &ensp; &nbsp; Hare Zeiyiukuin Atehortua Rincon  
+&emsp; &emsp; &ensp; &nbsp; Fredy Humberto Garzon Salgado  
+&emsp; &emsp; &ensp; &nbsp; Silvana Ramìrez Ardila  
 
 ## Contexto
 La aplicacion necesita una interfaz interactiva y minimalista (lo cual en teoria logra que sea intuitiva) pues va a contar con un tablero kanban dinamico(drag and drop) y actualizacion constante de componentes sin parpadeos de pantalla, debe soportar comunicacion fluida entre multiples usuarios en simultaneo mediante un chat integrado, la idea es separar la información estructurada (usuarios, tableros, tareas y mensajes) de los datos no tan importantes (usuarios conectados, estado 'escribiendo', caché de sesión).
