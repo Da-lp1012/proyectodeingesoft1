@@ -40,10 +40,10 @@ Documentos relacionados: [historias de usuario](historias-de-usuario.md) · [reg
 | [Cuentas y equipos](#cuentas-y-equipos) | [rf-cuentas-equipos.md](srs/rf-cuentas-equipos.md) | CU-01 a CU-09 |
 | [Chat](#chat) | [rf-chat.md](srs/rf-chat.md) | CU-10 a CU-16 |
 | [Árbol de proyecto](#árbol-de-proyecto) | [rf-arbol-proyecto.md](srs/rf-arbol-proyecto.md) | CU-17 a CU-24 |
-| [Tablero kanban](#Tablero-Kanban) | [rf-kanban.md](srs/rf-kanban.md) | CU-* a CU-* |
-| [Labels, roles y habilidades](#Labels-Habilidades) | [rf-labels-habilidades.md](srs/rf-labels-habilidades.md) | CU-* a CU-* |
-| [Notificaciones](#Notificaciones) | [rf-notificaciones.md](srs/rf-notificaciones.md) | CU-* a CU-* |
-| [Votaciones](#Votaciones) | [rf-votaciones.md](srs/rf-votaciones.md) | CU-* a CU-* |
+| [Tablero kanban](#Tablero-Kanban) | [rf-kanban.md](srs/rf-kanban.md) | CU-25* a CU-29* |
+| [Labels, roles y habilidades](#Labels-Habilidades) | [rf-labels-habilidades.md](srs/rf-labels-habilidades.md) | CU-30* a CU-33* |
+| [Notificaciones](#Notificaciones) | [rf-notificaciones.md](srs/rf-notificaciones.md) | CU-34* a CU-36* |
+| [Votaciones](#Votaciones) | [rf-votaciones.md](srs/rf-votaciones.md) | CU-37* a CU-40* |
 
 ## Requisitos no funcionales aplicables a todos los casos
 
@@ -444,11 +444,164 @@ Subtareas, progreso del padre, bloqueo de cierre, vista de esquema, reorganizaci
 
 Requerimientos en [rf-kanban.md](srs/rf-kanban.md).
 
+### CU-25 · Consultar el tablero y crear una tarjeta
+
+- **Actor:** Miembro · **Prioridad:** Must
+- **Precondiciones:** pertenece al equipo activo.
+- **Flujo principal:**
+  1. Abre el tablero del equipo.
+  2. El sistema muestra las columnas *Por hacer*, *En progreso* y *Hecho*, en ese orden, con sus tarjetas.
+  3. Elige "Crear tarjeta" e ingresa un título; opcionalmente agrega descripción, labels, responsable y fecha límite.
+  4. El sistema verifica que los labels y el responsable pertenezcan al mismo equipo.
+  5. Crea la tarjeta en *Por hacer* y la muestra en el tablero.
+- **Alternos:**
+  - 2a. El tablero no tiene tarjetas: muestra las tres columnas vacías.
+  - 3a. El título está vacío: rechaza la creación e indica que es obligatorio.
+  - 4a. Un label o responsable pertenece a otro equipo: rechaza la operación sin crear la tarjeta (`RN-06`, `RN-07`).
+- **Postcondiciones:** existe una tarjeta del equipo en *Por hacer*, con los datos opcionales indicados.
+- **Requisitos especiales:** `RNF-SEG-02` (membresía comprobada en el servidor); `RNF-SEG-03` (validación de entradas); `RNF-USA-03` (parte del recorrido de primer uso); `RNF-CON-02` (persistencia tras confirmar).
+- **Trazabilidad:** `RF-KAN-01`, `RF-KAN-02`, `RF-KAN-03` · `RN-06`, `RN-07` · HU-11, HU-12
+
+### CU-26 · Mover una tarjeta entre columnas
+
+- **Actor:** Miembro · **Prioridad:** Must
+- **Precondiciones:** el miembro tiene abierto el tablero y la tarjeta pertenece al equipo activo.
+- **Flujo principal:**
+  1. Arrastra la tarjeta a otra columna y la posición deseada.
+  2. El sistema guarda inmediatamente la nueva columna y posición.
+  3. El sistema refleja el cambio en los tableros abiertos de los demás miembros sin que recarguen.
+- **Alternos:**
+  - 2a. La tarjeta es una tarea padre y se intenta mover a *Hecho* mientras alguna subtarea directa sigue pendiente: el sistema rechaza el movimiento e informa cuántas faltan (CU-19, `RN-12`).
+  - 2b. La columna o posición enviada no es válida: rechaza el cambio sin modificar la tarjeta (`RNF-SEG-03`).
+  - 3a. Un cliente estaba desconectado: al reconectarse recibe el estado actualizado (`RNF-CON-01`).
+- **Postcondiciones:** la tarjeta queda en la columna y posición elegidas; las subtareas no mueven automáticamente a su padre (`RN-13`).
+- **Requisitos especiales:** `RNF-REN-02` (cambio visible en máximo 1 s en al menos el 95 % de los casos, en red local); `RNF-CON-02` (persistencia tras confirmar).
+- **Trazabilidad:** `RF-KAN-04`, `RF-KAN-05` · `RN-12`, `RN-13` · `RNF-REN-02`, `RNF-CON-01` · HU-13
+
+### CU-27 · Editar una tarjeta
+
+- **Actor:** Miembro · **Prioridad:** Must
+- **Precondiciones:** la tarjeta pertenece al equipo activo.
+- **Flujo principal:**
+  1. Abre la tarjeta y selecciona "Editar".
+  2. Modifica uno o más de estos campos: título, descripción, labels, responsable o fecha límite.
+  3. El sistema valida los datos y que los labels y el responsable pertenezcan al mismo equipo.
+  4. Guarda los cambios y los muestra en los tableros abiertos de los demás miembros.
+- **Alternos:**
+  - 3a. Un dato es inválido o un label/responsable pertenece a otro equipo: rechaza el cambio completo y conserva los valores anteriores (`RN-06`, `RN-07`).
+  - 3b. Se quita al responsable: la tarjeta queda sin responsable.
+- **Postcondiciones:** los campos editados quedan guardados; los datos no editados permanecen iguales.
+- **Requisitos especiales:** `RNF-SEG-02`, `RNF-SEG-03`; `RNF-REN-02` (propagación en tiempo real); `RNF-CON-02`.
+- **Trazabilidad:** `RF-KAN-05`, `RF-KAN-06` · `RN-06`, `RN-07` · `RNF-REN-02` · HU-34
+
+### CU-28 · Eliminar una tarjeta
+
+- **Actor:** Miembro · **Prioridad:** Must
+- **Precondiciones:** la tarjeta pertenece al equipo activo.
+- **Flujo principal:**
+  1. Selecciona "Eliminar" en la tarjeta.
+  2. El sistema solicita confirmación explícita; si hay subtareas, informa cuántas quedarán como tareas raíz (CU-22).
+  3. El miembro confirma.
+  4. El sistema elimina la tarjeta; si tenía subtareas directas, las conserva como tareas raíz, sin borrarlas en cascada.
+  5. El sistema refleja la eliminación en los tableros abiertos de los demás miembros.
+- **Alternos:**
+  - 3a. El miembro cancela: no se elimina ni modifica ninguna tarjeta.
+  - 4a. El miembro no pertenece al equipo: el servidor rechaza la operación (`RNF-SEG-02`).
+- **Postcondiciones:** la tarjeta ya no existe; sus subtareas directas, si había, permanecen sin padre (`RN-14`).
+- **Requisitos especiales:** `RNF-SEG-02`; `RNF-REN-02` (propagación en tiempo real); `RNF-CON-02`; `RNF-MAN-02` (`RN-14` con prueba automatizada).
+- **Trazabilidad:** `RF-KAN-05`, `RF-KAN-07`, `RF-ARB-12` · `RN-14` · `RNF-REN-02` · HU-34
+
+### CU-29 · Filtrar las tarjetas del tablero
+
+- **Actor:** Miembro · **Prioridad:** Could
+- **Precondiciones:** tiene abierto el tablero del equipo.
+- **Flujo principal:**
+  1. Selecciona un responsable, uno o más labels, o ambos criterios.
+  2. El sistema muestra solo las tarjetas que coinciden con los criterios seleccionados.
+  3. Quita uno o todos los filtros.
+  4. El sistema vuelve a mostrar las tarjetas que coinciden con los filtros restantes o todas las tarjetas si no queda ninguno.
+- **Alternos:**
+  - 2a. Ninguna tarjeta coincide: muestra el tablero sin tarjetas visibles e indica que no hay resultados.
+  - 3a. El miembro cambia de equipo: los filtros del equipo anterior no se aplican al tablero nuevo.
+- **Postcondiciones:** no cambia ningún dato de las tarjetas ni del tablero.
+- **Requisitos especiales:** ninguno específico.
+- **Trazabilidad:** `RF-KAN-08` · HU-14
+
 ---
 
 ## Labels, roles y habilidades
 
 Requerimientos en [rf-labels-habilidades.md](srs/rf-labels-habilidades.md).
+
+### CU-30 · Gestionar labels del equipo
+
+- **Actor:** Administrador · **Prioridad:** Must
+- **Precondiciones:** sesión activa; es administrador del equipo.
+- **Flujo principal:**
+  1. Crea un label con nombre único y elige si será un label de habilidad.
+  2. El sistema agrega el label al vocabulario del equipo.
+  3. Edita el nombre o cambia la marca de habilidad cuando sea necesario.
+  4. Para eliminar un label, el sistema informa cuántas tarjetas lo usan y solicita confirmación.
+  5. Tras confirmar, el sistema quita el label de esas tarjetas, elimina las respuestas de habilidad relacionadas y elimina el label.
+- **Alternos:**
+  - 1a. Ya existe un label con ese nombre en el equipo: rechaza la creación; el mismo nombre en otro equipo es independiente.
+  - 3a. Se quita la marca de habilidad: el sistema elimina los niveles de habilidad asociados (`RN-08`).
+  - 4a. El administrador cancela la eliminación: el label, sus usos y sus respuestas permanecen.
+  - 1b. Un miembro que no es administrador intenta crear, editar o eliminar un label, incluso mediante una petición directa: el servidor rechaza la operación (`RN-05`).
+- **Postcondiciones:** el vocabulario refleja los cambios confirmados y sigue perteneciendo al equipo.
+- **Requisitos especiales:** `RNF-SEG-02` (permisos comprobados en el servidor); `RNF-SEG-03` (validación); `RNF-USA-04` (rechazo accionable); `RNF-CON-02`.
+- **Trazabilidad:** `RF-LAB-01`, `RF-LAB-02`, `RF-LAB-03` · `RN-05`, `RN-08` · HU-16
+
+### CU-31 · Gestionar roles informativos del equipo
+
+- **Actor:** Administrador · **Prioridad:** Must
+- **Precondiciones:** sesión activa; es administrador del equipo.
+- **Flujo principal:**
+  1. Crea un rol con nombre, por ejemplo, *backend* o *scrum master*.
+  2. Asigna uno o varios roles a un miembro, o quita los que ya no correspondan.
+  3. El sistema muestra los roles asignados junto al nombre del miembro.
+- **Alternos:**
+  - 1a. Un miembro que no es administrador intenta crear un rol: el servidor rechaza la operación (`RN-05`).
+  - 2a. El rol o el miembro pertenecen a otro equipo: el sistema rechaza la operación.
+- **Postcondiciones:** los roles asignados son visibles como información del equipo y no cambian los permisos del miembro (`RN-04`).
+- **Requisitos especiales:** `RNF-SEG-02` (autorización en el servidor); `RNF-SEG-03` (validación de entradas); `RNF-USA-04` (mensaje de rechazo accionable).
+- **Trazabilidad:** `RF-LAB-04` · `RN-04`, `RN-05` · HU-15
+
+### CU-32 · Responder la encuesta de habilidades
+
+- **Actor:** Miembro · **Prioridad:** Must
+- **Precondiciones:** pertenece al equipo y hay labels de habilidad en su vocabulario.
+- **Flujo principal:**
+  1. Abre su encuesta de habilidades.
+  2. El sistema muestra solo los labels marcados como habilidad, cada uno inicialmente con su nivel guardado o como *sin responder*.
+  3. Declara para cada label uno de estos niveles: *bueno*, *regular* o *malo*.
+  4. El sistema guarda cada respuesta y permite dejar otras sin responder.
+  5. Más adelante, el miembro vuelve a la encuesta y cambia sus respuestas.
+- **Alternos:**
+  - 2a. El administrador crea un label de habilidad o marca como habilidad uno existente: aparece en la encuesta de todos los miembros como *sin responder*.
+  - 2b. Un label sin marca de habilidad no aparece en la encuesta.
+  - 3a. Un miembro intenta consultar los niveles de otra persona: el servidor rechaza la solicitud; el miembro solo puede consultar los propios (`RF-LAB-09`).
+  - 3b. Al desmarcar o eliminar un label de habilidad, se elimina su respuesta asociada (`RN-08`).
+- **Postcondiciones:** las respuestas parciales quedan guardadas para ese miembro y equipo; no son visibles para otros miembros.
+- **Requisitos especiales:** `RNF-SEG-02` (acceso verificado en el servidor); `RNF-SEG-03` (solo niveles permitidos); `RNF-CON-02` (persistencia).
+- **Trazabilidad:** `RF-LAB-05`, `RF-LAB-06`, `RF-LAB-09` · `RN-06`, `RN-08` · HU-17
+
+### CU-33 · Asignar responsable con información de habilidades
+
+- **Actor:** Miembro; el Administrador recibe el detalle de habilidades · **Prioridad:** Must (`RF-LAB-07`, `RF-LAB-09`), Should (`RF-LAB-08`)
+- **Precondiciones:** la tarjeta pertenece al equipo activo; el responsable elegido es miembro de ese equipo.
+- **Flujo principal:**
+  1. Abre la tarjeta y elige un responsable.
+  2. Si quien asigna es administrador, el sistema muestra para cada candidato los niveles declarados en los labels de habilidad asociados a la tarjeta; *sin responder* se muestra como tal.
+  3. Si la tarjeta no tiene labels de habilidad, el sistema no muestra niveles.
+  4. El miembro confirma la asignación y el sistema guarda al responsable.
+- **Alternos:**
+  - 2a. Un miembro que no es administrador realiza la asignación: no se le muestran los niveles de habilidad de otros miembros.
+  - 4a. El responsable elegido declaró *malo* en uno o más labels de habilidad de la tarjeta: el sistema muestra una advertencia y permite confirmar o cancelar; al confirmar, guarda la asignación y al cancelar, la conserva sin cambios.
+  - 4b. El candidato no pertenece al equipo: el sistema rechaza la asignación (`RN-07`).
+- **Postcondiciones:** la tarjeta tiene el responsable elegido, o mantiene el anterior si se cancela.
+- **Requisitos especiales:** `RNF-SEG-02` (tanto la asignación como la consulta de niveles se autorizan en el servidor); `RNF-USA-04` (advertencia comprensible).
+- **Trazabilidad:** `RF-LAB-07`, `RF-LAB-08`, `RF-LAB-09`, `RF-KAN-02`, `RF-KAN-06` · `RN-07` · HU-18, HU-19
 
 ---
 
@@ -456,11 +609,136 @@ Requerimientos en [rf-labels-habilidades.md](srs/rf-labels-habilidades.md).
 
 Requerimientos en [rf-notificaciones.md](srs/rf-notificaciones.md).
 
+### CU-34 · Recibir y consultar notificaciones
+
+- **Actor:** Miembro · **Prioridad:** Must
+- **Precondiciones:** tiene sesión activa y pertenece al equipo donde ocurre el evento.
+- **Flujo principal:**
+  1. Ocurre uno de estos eventos: lo mencionan en un mensaje, le asignan una tarjeta, publican una encuesta en un canal de su equipo o envían un mensaje en uno de sus canales.
+  2. Si el tipo de evento está activo en sus preferencias y el canal de origen no está silenciado, el sistema genera una notificación con tipo, texto corto y enlace al mensaje, tarjeta o encuesta.
+  3. El indicador permanente de campana aumenta el número de notificaciones no leídas.
+  4. El miembro abre la campana y ve la lista de la más reciente a la más antigua.
+  5. Abre una notificación o la marca como leída; también puede marcar todas como leídas.
+  6. Al abrirla, el sistema dirige al recurso, siempre que el miembro aún tenga acceso al equipo.
+- **Alternos:**
+  - 2a. El tipo de evento está desactivado: no se genera esa notificación (`RN-19`).
+  - 2b. El evento se originó en un canal silenciado: no se genera notificación, incluidas las menciones (`RN-19`).
+  - 5a. Marca una notificación como leída: disminuye el contador de no leídas en uno.
+  - 6a. Ya no tiene acceso al equipo: el servidor rechaza el acceso al recurso (`RNF-SEG-02`).
+- **Postcondiciones:** la notificación conserva su estado de lectura y enlace; el contador corresponde a las no leídas.
+- **Requisitos especiales:** `RNF-SEG-02` (notificaciones y recursos autorizados por equipo en el servidor); `RNF-USA-02` (interfaz en español); `RNF-USA-04` (mensajes comprensibles); `RNF-CON-02`.
+- **Trazabilidad:** `RF-NOT-01`, `RF-NOT-02` · `RN-19` · HU-20
+
+### CU-35 · Configurar preferencias y silenciar un canal
+
+- **Actor:** Usuario · **Prioridad:** Must (`RF-NOT-03`, `RF-NOT-04`), Should (`RF-NOT-05`)
+- **Precondiciones:** sesión activa; para silenciar un canal, pertenece al equipo de ese canal.
+- **Flujo principal:**
+  1. Abre sus preferencias de notificación.
+  2. Activa o desactiva por separado cada tipo de evento: mención, tarea asignada, encuesta publicada y mensaje en canal.
+  3. El sistema guarda las preferencias para el usuario y las aplica en todos sus equipos.
+  4. Para un canal concreto, el miembro selecciona "Silenciar canal"; el sistema deja de generar para él notificaciones originadas allí.
+  5. El miembro puede quitar el silencio; los eventos futuros del canal vuelven a generar notificaciones según sus preferencias por tipo.
+- **Alternos:**
+  - 2a. Desactiva "mensaje en canal" pero mantiene "mención" activa: los mensajes ordinarios no notifican, pero una mención sí (`RF-NOT-04`).
+  - 4a. El canal está silenciado: no notifica ningún evento originado allí, incluidas las menciones, aunque el tipo de evento esté activo.
+  - 4b. Intenta silenciar un canal de otro equipo sin membresía: el servidor rechaza la operación (`RNF-SEG-02`).
+- **Postcondiciones:** quedan guardadas las preferencias globales del usuario y el estado de silencio por canal.
+- **Requisitos especiales:** `RNF-SEG-02` (autorización en el servidor); `RNF-SEG-03` (validación de preferencias); `RNF-CON-02`.
+- **Trazabilidad:** `RF-NOT-03`, `RF-NOT-04`, `RF-NOT-05` · `RN-19` · HU-21, HU-22
+
+### CU-36 · Configurar notificaciones por correo
+
+- **Actor:** Usuario · **Prioridad:** Should
+- **Precondiciones:** tiene una cuenta con correo electrónico.
+- **Flujo principal:**
+  1. Abre la configuración de notificaciones por correo.
+  2. Activa o desactiva de forma independiente el correo para cada tipo de evento.
+  3. Cuando ocurre un evento de un tipo activado, el sistema envía un correo con el texto de la notificación y un enlace al recurso.
+  4. El correo llega en un máximo de 5 minutos desde el evento.
+- **Alternos:**
+  - 2a. El tipo está desactivado para correo: el sistema no envía correo por ese evento, aunque la notificación dentro de la aplicación se rija por su preferencia independiente.
+  - 3a. El correo no puede entregarse: el sistema conserva la notificación dentro de la aplicación; el fallo del servicio de correo no cambia las preferencias guardadas.
+- **Postcondiciones:** quedan guardadas las preferencias de correo por tipo y los correos se envían solo para los tipos activados.
+- **Requisitos especiales:** `RNF-USA-02` (correo en español); uso del proveedor externo permitido únicamente para esta función (`RES-05`).
+- **Trazabilidad:** `RF-NOT-06` · HU-23
+
 ---
 
 ## Votaciones
 
 Requerimientos en [rf-votaciones.md](srs/rf-votaciones.md).
+
+### CU-37 · Publicar una encuesta y votar
+
+- **Actor:** Miembro · **Prioridad:** Must (`RF-VOT-01`, `RF-VOT-02`, `RF-VOT-03`), Should (`RF-VOT-04`)
+- **Precondiciones:** pertenece al equipo del canal donde publicará la encuesta.
+- **Flujo principal:**
+  1. En el canal, elige "Crear encuesta" e ingresa una pregunta y al menos dos opciones.
+  2. Elige si la encuesta será anónima y la publica.
+  3. El sistema muestra la encuesta como mensaje especial, visible a los miembros del canal.
+  4. Un miembro elige una opción y emite su voto.
+  5. El sistema registra un voto para ese miembro, muestra los conteos por opción y el total, y los actualiza en tiempo real para quienes tienen abierto el canal.
+  6. Si el miembro vota de nuevo, el sistema reemplaza su voto anterior y actualiza los conteos.
+- **Alternos:**
+  - 1a. La pregunta está vacía o hay menos de dos opciones: rechaza la publicación (`RN-16`).
+  - 4a. El usuario no es miembro del equipo: el servidor rechaza la lectura o el voto (`RNF-SEG-02`).
+  - 6a. Si la encuesta es anónima, el sistema muestra conteos agregados, pero no revela qué opción eligió cada miembro, incluido el creador o administrador.
+  - 6b. La encuesta está cerrada: no permite votar ni cambiar el voto (CU-38, `RN-18`).
+- **Postcondiciones:** cada miembro tiene como máximo un voto por encuesta; si vota nuevamente, su voto anterior deja de contar (`RN-17`).
+- **Requisitos especiales:** `RNF-SEG-02` (membresía validada en el servidor); `RNF-SEG-03` (validación de pregunta y opciones); `RNF-CON-02` (el voto confirmado persiste).
+- **Trazabilidad:** `RF-VOT-01`, `RF-VOT-02`, `RF-VOT-03`, `RF-VOT-04` · `RN-16`, `RN-17` · HU-24, HU-25
+
+### CU-38 · Cerrar una encuesta
+
+- **Actor:** Creador de la encuesta · **Prioridad:** Should
+- **Precondiciones:** la encuesta está abierta.
+- **Flujo principal:**
+  1. El creador elige "Cerrar encuesta".
+  2. El sistema cierra la encuesta y muestra el resultado final marcado como cerrado.
+  3. El creador y los miembros consultan el resultado final.
+- **Alternos:**
+  - 2a. Después del cierre, un miembro intenta emitir o cambiar un voto: el sistema rechaza la operación y conserva el resultado final (`RN-18`).
+  - 2b. La encuesta ya está cerrada: no altera el resultado.
+- **Postcondiciones:** la encuesta permanece cerrada y sus votos ya no cambian.
+- **Requisitos especiales:** `RNF-SEG-02` (acceso restringido a miembros del equipo); `RNF-MAN-02` (`RN-18` con prueba automatizada); `RNF-CON-02`.
+- **Trazabilidad:** `RF-VOT-05` · `RN-18` · HU-26
+
+### CU-39 · Crear una tarea desde la opción ganadora
+
+- **Actor:** Miembro · **Prioridad:** Could
+- **Precondiciones:** pertenece al equipo de la encuesta; la encuesta está cerrada y tiene una opción ganadora.
+- **Flujo principal:**
+  1. Abre el resultado de la encuesta cerrada.
+  2. Elige "Crear tarea" sobre la opción ganadora.
+  3. El sistema crea una tarjeta en *Por hacer* usando el texto de esa opción como título.
+  4. La tarjeta conserva un enlace a la encuesta de origen.
+- **Alternos:**
+  - 1a. La encuesta sigue abierta: el sistema no ofrece crear la tarea desde un resultado final.
+  - 2a. El usuario no tiene acceso al equipo de la encuesta: el servidor rechaza la operación (`RNF-SEG-02`).
+- **Postcondiciones:** hay una tarjeta enlazada a la encuesta cerrada y ubicada en *Por hacer*.
+- **Requisitos especiales:** `RNF-SEG-02`; `RNF-SEG-03` (validación del título); `RNF-CON-02`.
+- **Trazabilidad:** `RF-VOT-06`, `RF-KAN-02` · HU-27
+
+### CU-40 · Elegir responsable mediante una votación
+
+- **Actor:** Miembro · **Prioridad:** Could
+- **Precondiciones:** la tarjeta pertenece al equipo activo; sus miembros pueden acceder a ese equipo.
+- **Flujo principal:**
+  1. Desde la tarjeta, el miembro elige "Votar responsable".
+  2. El sistema crea una encuesta cuyas opciones son los miembros del equipo y la publica.
+  3. Los miembros emiten o reemplazan su voto mientras la encuesta está abierta (CU-37).
+  4. El creador cierra la encuesta (CU-38).
+  5. El sistema ofrece asignar a la tarjeta al miembro ganador.
+  6. Al revisar la asignación, el administrador ve los niveles de habilidad pertinentes (CU-33); si el ganador declaró *malo* en un label de habilidad de la tarjeta, el sistema advierte y permite confirmar o cancelar.
+  7. Si se confirma, el sistema asigna al ganador como responsable; si se cancela, la tarjeta no cambia.
+- **Alternos:**
+  - 2a. Un miembro ajeno al equipo intenta consultar opciones o votar: el servidor rechaza la operación (`RNF-SEG-02`).
+  - 5a. La encuesta no tiene una opción ganadora única: el SRS no define cómo resolver el empate o la ausencia de votos; no se aplica una asignación automática y queda pendiente acordar el comportamiento.
+  - 6a. La tarjeta no tiene labels de habilidad: no se muestran niveles ni advertencia por nivel bajo.
+- **Postcondiciones:** si se confirma, el ganador queda como responsable de la tarjeta; de lo contrario, la asignación previa permanece.
+- **Requisitos especiales:** `RNF-SEG-02` (membresía y confidencialidad de niveles verificadas en el servidor); `RNF-SEG-03`; `RNF-CON-02`; `RNF-MAN-02` (`RN-17`, `RN-18`).
+- **Trazabilidad:** `RF-VOT-07`, `RF-VOT-02`, `RF-VOT-05`, `RF-LAB-07`, `RF-LAB-08`, `RF-LAB-09`, `RF-KAN-06` · `RN-07`, `RN-17`, `RN-18` · HU-28
 
 ---
 
@@ -471,8 +749,13 @@ Requerimientos en [rf-votaciones.md](srs/rf-votaciones.md).
 | Cuentas y equipos | `RF-CUE-01` a `RF-CUE-13` (13) | CU-01 a CU-09 |
 | Chat | `RF-CHA-01` a `RF-CHA-09` (9) | CU-10 a CU-16 |
 | Árbol de proyecto | `RF-ARB-01` a `RF-ARB-15` (15) | CU-17 a CU-24 |
+| Tablero kanban | `RF-KAN-01` a `RF-KAN-08` (8) | CU-25 a CU-29 |
+| Labels, roles y habilidades | `RF-LAB-01` a `RF-LAB-09` (9) | CU-30 a CU-33 |
+| Notificaciones | `RF-NOT-01` a `RF-NOT-06` (6) | CU-34 a CU-36 |
+| Votaciones | `RF-VOT-01` a `RF-VOT-07` (7) | CU-37 a CU-40 |
 
 ## Pendientes
 
 - Casos de uso de Kanban, Labels y habilidades, Notificaciones y Votaciones.
 - Crear las historias HU-36, HU-37 y HU-38, propuestas en el SRS para `RF-CUE-12`, `RF-CUE-13` y `RF-CHA-06`.
+- Acordar qué hacer con los resultados sin ganador único (empate o cero votos) para `RF-VOT-06` y `RF-VOT-07`; el SRS no define ese comportamiento.
