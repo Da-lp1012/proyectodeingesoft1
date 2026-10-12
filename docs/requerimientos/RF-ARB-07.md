@@ -26,6 +26,10 @@
 **Value / Rationale**
 > El tablero no debe poder decir "terminado" sobre algo que tiene partes sin terminar; así el equipo y su líder ven el avance real sin tener que revisar tarea por tarea.
 
+**Por qué es el requerimiento elegido (el más importante y complejo)**
+> - **Importante:** es lo que hace confiable la columna *Hecho*. El indicador de progreso (`RF-ARB-05`) y la vista de esquema (`RF-ARB-09`) solo tienen sentido si *Hecho* significa terminado de verdad, y responde a lo que el perfil de líder necesita según el SRS (§2.3): que el tablero no mienta. Es *Must* y su regla de negocio (RN-12) figura entre las que `RNF-MAN-02` exige proteger con pruebas automatizadas, por ser reglas cuya violación corrompe datos o miente al usuario.
+> - **Complejo:** a diferencia de otros requerimientos del árbol, que tocan un solo módulo, este cruza varios: el movimiento de tarjetas (`RF-KAN-04`), la jerarquía de subtareas (`RF-ARB-01`, `RF-ARB-02`), la propagación en tiempo real (`RF-KAN-05`, `RNF-REN-02`) y la validación en el servidor (`RNF-SEG-02`, `RNF-SEG-03`). Además tiene casos borde que el equipo todavía no ha decidido (Open Questions 1 y 2 de la Sección 2).
+
 ---
 
 ## 2. Context — A Requirement Rarely Stands Alone
@@ -74,7 +78,6 @@
 
 **Priority assigned:**
 > Porque la regla es lo que hace que el estado *Hecho* sea confiable (el equipo definió que el tablero "no debe mentir" para el perfil de líder), y porque otras funciones del árbol (indicador de progreso `RF-ARB-05`, esquema `RF-ARB-09`) solo tienen sentido si *Hecho* significa terminado de verdad, asignamos **Must have**, aceptando el trade-off de dedicar tiempo a la validación en el servidor y a su comportamiento en tiempo real, tiempo que no se invertirá en requerimientos *Should* como la vista de esquema o el cambio de padre. Consideramos **Should have** y no lo usamos porque, sin esta regla, el MVP permitiría estados contradictorios (padre *Hecho* con hijas abiertas) y el indicador "3/5" contradiría la columna del padre. Es consistente con la prioridad de su historia (HU-31) y con RES-04 (todo *Must* se entrega al cierre del semestre).
-> *(Nota para el equipo: sustituir o complementar este argumento con el razonamiento del taller de Professional Requirements Attributes si fue distinto.)*
 
 **Estimate (confidence):** Medium
 > La lógica de evaluar las subtareas directas y contar pendientes es sencilla. Lo que baja la confianza de High a Medium es: (a) hacer el rechazo de forma atómica en el servidor y devolver la tarjeta en la interfaz con arrastrar y soltar sin parpadeos; (b) propagar el resultado en tiempo real a los demás clientes; (c) las Open Questions 1 y 2, que podrían añadir comportamiento.
@@ -102,7 +105,7 @@
 **Scenario 2 (AC-ARB-07.2) — Cierre permitido tras terminar las subtareas (alternativa)**
 > **Given** la misma tarjeta padre cuya única subtarea directa ya está en *Hecho*
 > **When** el miembro arrastra el padre a *Hecho*
-> **Then** el padre se mueve a *Hecho* y queda guardado (y, como en HU-31, ningún padre cambia de columna por sí solo)
+> **Then** el padre se mueve a *Hecho* y queda guardado
 
 **Scenario 3 (AC-ARB-07.3) — Varias subtareas pendientes**
 > **Given** un padre con 5 subtareas directas, 3 en *Hecho* y 2 fuera de *Hecho*
@@ -126,17 +129,16 @@
 
 **Main Flow**
 1. El miembro arrastra la tarjeta a *Hecho* y la suelta.
-2. El sistema verifica la membresía del miembro en el equipo.
-3. El sistema consulta las subtareas directas de la tarjeta.
-4. El sistema comprueba que todas están en *Hecho* (o que no tiene subtareas).
-5. El sistema mueve la tarjeta a *Hecho* y guarda el cambio.
-6. El sistema muestra el cambio a los demás miembros que tengan el tablero abierto.
+2. El sistema consulta las subtareas directas de la tarjeta.
+3. El sistema comprueba que todas las subtareas directas están en *Hecho* (si la tarjeta no tiene subtareas, no hay nada que comprobar y se pasa al paso 4).
+4. El sistema mueve la tarjeta a *Hecho* y guarda el cambio.
+5. El sistema muestra el cambio a los demás miembros que tengan el tablero abierto.
 
 **Alternative Flow**
-> La tarjeta no tiene subtareas → el sistema omite la comprobación de pendientes y mueve la tarjeta a *Hecho* (equivale al flujo principal desde el paso 5).
+> Al menos una subtarea directa está fuera de *Hecho* (paso 3) → el sistema no mueve la tarjeta, la devuelve a su columna original e informa cuántas subtareas faltan por pasar a *Hecho*. No se modifica ningún otro dato (Scenarios 1 y 3).
 
 **Exception**
-> Al menos una subtarea directa está fuera de *Hecho* → el sistema no mueve la tarjeta, la devuelve a su columna original e informa cuántas subtareas están pendientes. No se modifica ningún otro dato.
+> N/A — none identified. El único desvío de este caso de uso es el rechazo por subtareas pendientes, que ya está descrito como Alternative Flow.
 
 **Postcondition**
 > La tarjeta está en *Hecho* únicamente si todas sus subtareas directas están en *Hecho*; si no, permanece en su columna original y el miembro sabe cuántas subtareas faltan.
@@ -146,26 +148,24 @@
 ```mermaid
 flowchart TD
     A([Miembro arrastra una tarjeta a Hecho]) --> B["1. Miembro suelta la tarjeta en Hecho"]
-    B --> C["2. Sistema verifica membresia en el equipo"]
-    C --> D["3. Sistema consulta las subtareas directas"]
-    D --> E{"Tiene subtareas directas fuera de Hecho?"}
-    E -- "No, todas en Hecho" --> G["4. Sistema mueve la tarjeta a Hecho y guarda"]
-    G --> G2["5. Sistema propaga el cambio a los demas clientes"]
+    B --> C["2. Sistema consulta las subtareas directas"]
+    C --> D{"Tiene subtareas?"}
+    D -- "No" --> G["4. Sistema mueve la tarjeta a Hecho y guarda"]
+    D -- "Si" --> E["3. Sistema comprueba que todas las subtareas estan en Hecho"]
+    E --> F{"Todas estan en Hecho?"}
+    F -- "Si" --> G
+    G --> G2["5. Sistema muestra el cambio a los demas miembros"]
     G2 --> H(["Postcondicion: tarjeta en Hecho"])
-    E -- "No tiene subtareas" --> ALT["ALTERNATIVE: se omite la comprobacion de pendientes"]
-    ALT --> G
-    E -- "Si, hay pendientes" --> X["EXCEPTION: sistema devuelve la tarjeta a su columna e informa cuantas subtareas estan pendientes"]
+    F -- "No, hay pendientes" --> X["ALTERNATIVE: sistema devuelve la tarjeta a su columna e informa cuantas subtareas faltan"]
     X --> H2(["Postcondicion: tarjeta sin cambios, miembro informado"])
 
     classDef mainflow fill:#1E2761,color:#ffffff,stroke:#1E2761;
     classDef alt fill:#F2A541,color:#1E2761,stroke:#F2A541;
-    classDef exception fill:#B3261E,color:#ffffff,stroke:#B3261E;
-    class B,C,D,G,G2 mainflow;
-    class ALT alt;
-    class X exception;
+    class B,C,E,G,G2 mainflow;
+    class X alt;
 ```
 
-*(Azul = flujo principal, ámbar = alternativo, rojo = excepción.)*
+*(Azul = flujo principal, ámbar = alternativo. Los números coinciden con los pasos del Main Flow; este caso de uso no tiene Exception.)*
 
 ---
 
@@ -176,7 +176,7 @@ flowchart TD
 > *(No existe entrada de Discovery Sheet que enlazar: la fuente es la decisión del equipo, no una entrevista con un stakeholder externo.)*
 
 **Forward — what will this affect?**
-> RF-ARB-07 → diseño: una validación en el módulo *árbol* del servidor (`RNF-MAN-04`) invocada por la operación de mover tarjeta del módulo *kanban*, y un manejo en la interfaz que revierta el arrastre y muestre el mensaje → implementación → pruebas: los Scenarios 1–4 como base; RN-12 debe quedar cubierta por prueba automatizada (`RNF-MAN-02`). *(El diseño aún no existe; se actualizará al comenzar Class 11.)*
+> RF-ARB-07 → diseño: una validación en el módulo *árbol* del servidor (`RNF-MAN-04`) invocada por la operación de mover tarjeta del módulo *kanban*, y un manejo en la interfaz que revierta el arrastre y muestre el mensaje → implementación → pruebas: los Scenarios 1–4 como base; RN-12 debe quedar cubierta por prueba automatizada (`RNF-MAN-02`).
 
 **Impact Analysis — if this requirement changes, what else might need to change?**
 - [x] Business Rules
