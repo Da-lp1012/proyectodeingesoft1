@@ -2,11 +2,11 @@
 
 Versión 0.1 · 2026-10-11 · Borrador para discusión con el equipo
 
-> **Alcance de la 0.1:** casos de uso de los módulos Cuentas y equipos (`RF-CUE`), Chat (`RF-CHA`) y Árbol de proyecto (`RF-ARB`): 37 requerimientos funcionales agrupados en 24 casos de uso. Los módulos Kanban, Labels y habilidades, Notificaciones y Votaciones se agregarán en versiones posteriores. Los requerimientos no funcionales ya están incorporados a cada caso (campo *Requisitos especiales*).
+> **Alcance de la 0.1:** casos de uso de los módulos Cuentas y equipos (`RF-CUE`), Chat (`RF-CHA`), Árbol de proyecto (`RF-ARB`), Tablero kanban (`RF-KAN`), Labels, roles y habilidades (`RF-LAB`), Notificaciones (`RF-NOT`) y Votaciones (`RF-VOT`): 67 requerimientos funcionales agrupados en * casos de uso. Los requerimientos no funcionales ya están incorporados a cada caso (campo *Requisitos especiales*).
 
 ## Cómo leer este documento
 
-Un **caso de uso** describe cómo un actor alcanza un objetivo completo con el sistema. Un caso puede cubrir varios requerimientos funcionales, y cada requerimiento aparece en al menos un caso. La trazabilidad completa está en la [especificación de requerimientos (SRS)](README.md).
+Un **caso de uso** describe cómo un actor alcanza un objetivo completo con el sistema. Un caso puede cubrir varios requerimientos funcionales, y cada requerimiento aparece en al menos un caso. La trazabilidad completa está en la [especificación de requerimientos (SRS)](srs/README.md).
 
 Cada caso sigue esta plantilla:
 
@@ -21,7 +21,7 @@ Cada caso sigue esta plantilla:
 | **Requisitos especiales** | Requerimientos no funcionales específicos del caso |
 | **Trazabilidad** | RF, RN, RNF e historias de usuario relacionados |
 
-**Prioridad (MoSCoW):** *Must* se entrega este semestre sí o sí · *Should* se entrega si el ritmo lo permite · *Could* solo si sobra tiempo.
+**Prioridad (MoSCoW):** *Must* se entrega al finalizar el proyecto · *Should* se entrega si el ritmo lo permite · *Could* solo si sobra tiempo.
 
 **Actores:**
 
@@ -31,15 +31,19 @@ Cada caso sigue esta plantilla:
 - **Administrador:** miembro con permisos de administración de un equipo (quien lo creó, o a quien se le transfirió). Es el único permiso especial (`RN-04`).
 - **Sistema:** Slackless, como actor secundario cuando ejecuta reglas automáticas.
 
-Documentos relacionados: [historias de usuario](../historias-de-usuario.md) · [reglas de negocio](reglas-negocio.md) · [requerimientos no funcionales](rnf.md).
+Documentos relacionados: [historias de usuario](historias-de-usuario.md) · [reglas de negocio](srs/reglas-negocio.md) · [requerimientos no funcionales](srs/rnf.md).
 
 ## Índice
 
 | Módulo | Archivo de requerimientos | Casos de uso |
 |---|---|---|
-| [Cuentas y equipos](#cuentas-y-equipos) | [rf-cuentas-equipos.md](rf-cuentas-equipos.md) | CU-01 a CU-09 |
-| [Chat](#chat) | [rf-chat.md](rf-chat.md) | CU-10 a CU-16 |
-| [Árbol de proyecto](#árbol-de-proyecto) | [rf-arbol-proyecto.md](rf-arbol-proyecto.md) | CU-17 a CU-24 |
+| [Cuentas y equipos](#cuentas-y-equipos) | [rf-cuentas-equipos.md](srs/rf-cuentas-equipos.md) | CU-01 a CU-09 |
+| [Chat](#chat) | [rf-chat.md](srs/rf-chat.md) | CU-10 a CU-16 |
+| [Árbol de proyecto](#árbol-de-proyecto) | [rf-arbol-proyecto.md](srs/rf-arbol-proyecto.md) | CU-17 a CU-24 |
+| [Tablero kanban](#Tablero-Kanban) | [rf-kanban.md](srs/rf-kanban.md) | CU-* a CU-* |
+| [Labels, roles y habilidades](#Labels-Habilidades) | [rf-labels-habilidades.md](srs/rf-labels-habilidades.md) | CU-* a CU-* |
+| [Notificaciones](#Notificaciones) | [rf-notificaciones.md](srs/rf-notificaciones.md) | CU-* a CU-* |
+| [Votaciones](#Votaciones) | [rf-votaciones.md](srs/rf-votaciones.md) | CU-* a CU-* |
 
 ## Requisitos no funcionales aplicables a todos los casos
 
@@ -58,7 +62,7 @@ Documentos relacionados: [historias de usuario](../historias-de-usuario.md) · [
 
 ## Cuentas y equipos
 
-Registro, sesión, creación de equipos, invitaciones, membresías y administración. Requerimientos en [rf-cuentas-equipos.md](rf-cuentas-equipos.md).
+Registro, sesión, creación de equipos, invitaciones, membresías y administración. Requerimientos en [rf-cuentas-equipos.md](srs/rf-cuentas-equipos.md).
 
 ### CU-01 · Registrar cuenta
 
@@ -199,7 +203,7 @@ Registro, sesión, creación de equipos, invitaciones, membresías y administrac
 
 ## Chat
 
-Canales, mensajes en tiempo real, conversaciones directas, menciones y creación de tareas desde el chat. Requerimientos en [rf-chat.md](rf-chat.md).
+Canales, mensajes en tiempo real, conversaciones directas, menciones y creación de tareas desde el chat. Requerimientos en [rf-chat.md](srs/rf-chat.md).
 
 ### CU-10 · Crear canal
 
@@ -234,7 +238,7 @@ Canales, mensajes en tiempo real, conversaciones directas, menciones y creación
 - **Precondiciones:** tiene un canal del equipo abierto.
 - **Flujo principal:**
   1. Escribe el texto y lo envía.
-  2. El sistema lo almacena con autor y fecha y hora de envío.
+  2. El sistema lo almacena con autor, fecha y hora de envío.
   3. Lo entrega a todos los miembros que tengan el canal abierto, sin recargar la página.
   4. Si el mensaje contiene menciones, el sistema las procesa (CU-15).
 - **Alternos:**
@@ -309,7 +313,7 @@ Canales, mensajes en tiempo real, conversaciones directas, menciones y creación
 
 ## Árbol de proyecto
 
-Subtareas, progreso del padre, bloqueo de cierre, vista de esquema, reorganización y color por rama. Requerimientos en [rf-arbol-proyecto.md](rf-arbol-proyecto.md).
+Subtareas, progreso del padre, bloqueo de cierre, vista de esquema, reorganización y color por rama. Requerimientos en [rf-arbol-proyecto.md](srs/rf-arbol-proyecto.md).
 
 ### CU-17 · Crear subtarea
 
@@ -332,7 +336,7 @@ Subtareas, progreso del padre, bloqueo de cierre, vista de esquema, reorganizaci
 - **Actor:** Miembro · **Prioridad:** Must
 - **Precondiciones:** existen tarjetas con relación padre-hijo.
 - **Flujo principal:**
-  1. En el tablero, cada subtarea muestra "↳ parte de: <padre>" con enlace al detalle del padre.
+  1. En el tablero, cada subtarea muestra "↳ parte de: < padre >" con enlace al detalle del padre.
   2. Cada padre muestra el progreso "hechas/total" de sus subtareas directas (por ejemplo "3/5").
   3. Al abrir el detalle de un padre, el miembro ve la lista de sus subtareas con la columna actual y el responsable de cada una.
   4. Abre una subtarea desde esa lista.
@@ -436,15 +440,29 @@ Subtareas, progreso del padre, bloqueo de cierre, vista de esquema, reorganizaci
 
 ---
 
-## Relaciones entre casos de uso
+## Tablero kanban
 
-| Caso | Relación | Caso |
-|---|---|---|
-| CU-12 Enviar mensaje | `<<include>>` (si hay `@nombre`) | CU-15 Mencionar |
-| CU-09 Salir del equipo | `<<extend>>` (único administrador) | CU-08 Transferir administración |
-| CU-20 Esquema | `<<include>>` | CU-24 Color efectivo |
-| CU-23 Asignar color | `<<include>>` | CU-24 Color efectivo |
-| CU-19 Mover a *Hecho* | `<<extend>>` de mover tarjeta (`RF-KAN-04`) | — |
+Requerimientos en [rf-kanban.md](srs/rf-kanban.md).
+
+---
+
+## Labels, roles y habilidades
+
+Requerimientos en [rf-labels-habilidades.md](srs/rf-labels-habilidades.md).
+
+---
+
+## Notificaciones
+
+Requerimientos en [rf-notificaciones.md](srs/rf-notificaciones.md).
+
+---
+
+## Votaciones
+
+Requerimientos en [rf-votaciones.md](srs/rf-votaciones.md).
+
+---
 
 ## Cobertura
 
@@ -454,10 +472,7 @@ Subtareas, progreso del padre, bloqueo de cierre, vista de esquema, reorganizaci
 | Chat | `RF-CHA-01` a `RF-CHA-09` (9) | CU-10 a CU-16 |
 | Árbol de proyecto | `RF-ARB-01` a `RF-ARB-15` (15) | CU-17 a CU-24 |
 
-Los requerimientos `RNF-MAN-01`, `RNF-MAN-03`, `RNF-MAN-04`, `RNF-POR-02` y las restricciones `RES-*` describen cómo se construye y despliega el sistema, no lo que hace el usuario, así que no aparecen en los casos.
-
 ## Pendientes
 
-- Casos de uso de Kanban, Labels y habilidades, Notificaciones y Votaciones (versión 0.2).
+- Casos de uso de Kanban, Labels y habilidades, Notificaciones y Votaciones.
 - Crear las historias HU-36, HU-37 y HU-38, propuestas en el SRS para `RF-CUE-12`, `RF-CUE-13` y `RF-CHA-06`.
-- Confirmar con el profesor si, además de este documento, se exigen casos de uso en notación UML (diagrama).
