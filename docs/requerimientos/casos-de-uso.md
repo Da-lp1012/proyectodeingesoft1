@@ -2,7 +2,7 @@
 
 Versión 0.1 · 2026-10-11 · Borrador para discusión con el equipo
 
-> **Alcance de la 0.1:** casos de uso de los módulos Cuentas y equipos (`RF-CUE`), Chat (`RF-CHA`), Árbol de proyecto (`RF-ARB`), Tablero kanban (`RF-KAN`), Labels, roles y habilidades (`RF-LAB`), Notificaciones (`RF-NOT`) y Votaciones (`RF-VOT`): 67 requerimientos funcionales agrupados en * casos de uso. Los requerimientos no funcionales ya están incorporados a cada caso (campo *Requisitos especiales*).
+> **Alcance de la 0.1:** Casos de uso de los módulos Cuentas y equipos (`RF-CUE`), Chat (`RF-CHA`), Árbol de proyecto (`RF-ARB`), Tablero Kanban (`RF-KAN`), Labels, roles y habilidades (`RF-LAB`), Notificaciones (`RF-NOT`) y Votaciones (`RF-VOT`). Los 67 requerimientos funcionales están cubiertos en 40 casos de uso. Los requerimientos no funcionales aplicables se indican en la sección *Requisitos no funcionales aplicables a todos los casos* y en el campo *Requisitos especiales* de cada caso cuando corresponda.
 
 ## Cómo leer este documento
 
@@ -40,10 +40,10 @@ Documentos relacionados: [historias de usuario](historias-de-usuario.md) · [reg
 | [Cuentas y equipos](#cuentas-y-equipos) | [rf-cuentas-equipos.md](srs/rf-cuentas-equipos.md) | CU-01 a CU-09 |
 | [Chat](#chat) | [rf-chat.md](srs/rf-chat.md) | CU-10 a CU-16 |
 | [Árbol de proyecto](#árbol-de-proyecto) | [rf-arbol-proyecto.md](srs/rf-arbol-proyecto.md) | CU-17 a CU-24 |
-| [Tablero kanban](#Tablero-Kanban) | [rf-kanban.md](srs/rf-kanban.md) | CU-25* a CU-29* |
-| [Labels, roles y habilidades](#Labels-Habilidades) | [rf-labels-habilidades.md](srs/rf-labels-habilidades.md) | CU-30* a CU-33* |
-| [Notificaciones](#Notificaciones) | [rf-notificaciones.md](srs/rf-notificaciones.md) | CU-34* a CU-36* |
-| [Votaciones](#Votaciones) | [rf-votaciones.md](srs/rf-votaciones.md) | CU-37* a CU-40* |
+| [Tablero kanban](#Tablero-Kanban) | [rf-kanban.md](srs/rf-kanban.md) | CU-25 a CU-29 |
+| [Labels, roles y habilidades](#Labels-Habilidades) | [rf-labels-habilidades.md](srs/rf-labels-habilidades.md) | CU-30 a CU-33 |
+| [Notificaciones](#Notificaciones) | [rf-notificaciones.md](srs/rf-notificaciones.md) | CU-34 a CU-36 |
+| [Votaciones](#Votaciones) | [rf-votaciones.md](srs/rf-votaciones.md) | CU-37 a CU-40 |
 
 ## Requisitos no funcionales aplicables a todos los casos
 
@@ -454,12 +454,13 @@ Requerimientos en [rf-kanban.md](srs/rf-kanban.md).
   3. Elige "Crear tarjeta" e ingresa un título; opcionalmente agrega descripción, labels, responsable y fecha límite.
   4. El sistema verifica que los labels y el responsable pertenezcan al mismo equipo.
   5. Crea la tarjeta en *Por hacer* y la muestra en el tablero.
+  6. El sistema refleja la nueva tarjeta en los tableros abiertos de los demás miembros del equipo, sin que tengan que recargar la página
 - **Alternos:**
   - 2a. El tablero no tiene tarjetas: muestra las tres columnas vacías.
   - 3a. El título está vacío: rechaza la creación e indica que es obligatorio.
   - 4a. Un label o responsable pertenece a otro equipo: rechaza la operación sin crear la tarjeta (`RN-06`, `RN-07`).
 - **Postcondiciones:** existe una tarjeta del equipo en *Por hacer*, con los datos opcionales indicados.
-- **Requisitos especiales:** `RNF-SEG-02` (membresía comprobada en el servidor); `RNF-SEG-03` (validación de entradas); `RNF-USA-03` (parte del recorrido de primer uso); `RNF-CON-02` (persistencia tras confirmar).
+- **Requisitos especiales:** `RNF-SEG-02` (membresía comprobada en el servidor); `RNF-SEG-03` (validación de entradas); `RNF-USA-03` (parte del recorrido de primer uso); `RNF-CON-02` (persistencia tras confirmar) `RNF-REN-02` (cambio visible en máximo 2 s en al menos el 95 % de los casos, en red local).
 - **Trazabilidad:** `RF-KAN-01`, `RF-KAN-02`, `RF-KAN-03` · `RN-06`, `RN-07` · HU-11, HU-12
 
 ### CU-26 · Mover una tarjeta entre columnas
@@ -561,7 +562,7 @@ Requerimientos en [rf-labels-habilidades.md](srs/rf-labels-habilidades.md).
   2. Asigna uno o varios roles a un miembro, o quita los que ya no correspondan.
   3. El sistema muestra los roles asignados junto al nombre del miembro.
 - **Alternos:**
-  - 1a. Un miembro que no es administrador intenta crear un rol: el servidor rechaza la operación (`RN-05`).
+  - 1a. Un miembro que no es administrador intenta crear un rol, asignarlo a un miembro o quitarlo, incluso mediante una petición directa: el servidor rechaza la operación (`RN-05`).
   - 2a. El rol o el miembro pertenecen a otro equipo: el sistema rechaza la operación.
 - **Postcondiciones:** los roles asignados son visibles como información del equipo y no cambian los permisos del miembro (`RN-04`).
 - **Requisitos especiales:** `RNF-SEG-02` (autorización en el servidor); `RNF-SEG-03` (validación de entradas); `RNF-USA-04` (mensaje de rechazo accionable).
@@ -755,7 +756,6 @@ Requerimientos en [rf-votaciones.md](srs/rf-votaciones.md).
 | Votaciones | `RF-VOT-01` a `RF-VOT-07` (7) | CU-37 a CU-40 |
 
 ## Pendientes
-
-- Casos de uso de Kanban, Labels y habilidades, Notificaciones y Votaciones.
 - Crear las historias HU-36, HU-37 y HU-38, propuestas en el SRS para `RF-CUE-12`, `RF-CUE-13` y `RF-CHA-06`.
 - Acordar qué hacer con los resultados sin ganador único (empate o cero votos) para `RF-VOT-06` y `RF-VOT-07`; el SRS no define ese comportamiento.
+- 
