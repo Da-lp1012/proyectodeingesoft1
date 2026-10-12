@@ -59,7 +59,7 @@
 
 | Risk | Likelihood | Impact | Mitigation (optional) |
 |---|---|---|---|
-| Se valida solo en la interfaz y una petición directa al servidor salta la regla | Medium | High (el tablero vuelve a "mentir") | Validar en el servidor (`RNF-SEG-02`) y probarlo con una petición sin interfaz (AC-ARB-07.3) |
+| Se valida solo en la interfaz y una petición directa al servidor salta la regla | Medium | High (el tablero vuelve a "mentir") | Validar en el servidor (`RNF-SEG-02`) y probarlo con una petición sin interfaz (AC-ARB-07.4) |
 | Dos miembros actúan a la vez: uno mueve el padre a *Hecho* mientras otro devuelve una subtarea a *En progreso* | Low–Medium | Medium (estado inconsistente) | Evaluar y aplicar el movimiento en una sola operación atómica en el servidor |
 | El miembro no entiende por qué la tarjeta "vuelve" | Medium | Medium (frustración, percepción de error) | Mensaje accionable con el número de pendientes (`RNF-USA-04`) |
 | La tarjeta rechazada queda visualmente en *Hecho* en otros clientes | Low | Medium | Propagar el rechazo según `RNF-REN-02` / `RF-KAN-05` |
