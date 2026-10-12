@@ -1,0 +1,37 @@
+flowchart TD
+    PRE["Precondición: el miembro tiene sesión y pertenece al equipo.<br/>La tarjeta existe y no está en Hecho"]
+    INI(["Disparador: el miembro arrastra una tarjeta a Hecho"])
+    P1["1. El miembro suelta la tarjeta en Hecho"]
+    P2["2. El sistema consulta las subtareas directas de la tarjeta"]
+    D1{"¿La tarjeta tiene subtareas directas?"}
+    P3["3. El sistema comprueba que todas las subtareas directas están en Hecho"]
+    D2{"¿Todas están en Hecho?"}
+    SIN["Sin subtareas: no hay nada que comprobar"]
+    P4["4. El sistema mueve la tarjeta a Hecho y guarda el cambio"]
+    P5["5. El sistema muestra el cambio a los demás miembros que tengan el tablero abierto"]
+    FIN1(["Postcondición: la tarjeta está en Hecho"])
+    ALT1["Flujo alternativo: el sistema no mueve la tarjeta y la devuelve a su columna original"]
+    ALT2["El sistema informa cuántas subtareas faltan por pasar a Hecho.<br/>No se modifica ningún otro dato"]
+    FIN2(["Postcondición: la tarjeta sigue en su columna original y el miembro sabe cuántas subtareas faltan"])
+
+    PRE -.-> INI
+    INI --> P1
+    P1 --> P2
+    P2 --> D1
+    D1 -- "No" --> SIN
+    SIN --> P4
+    D1 -- "Sí" --> P3
+    P3 --> D2
+    D2 -- "Sí, todas" --> P4
+    D2 -- "No, hay pendientes" --> ALT1
+    ALT1 --> ALT2
+    ALT2 --> FIN2
+    P4 --> P5
+    P5 --> FIN1
+
+    classDef nota fill:#f5f5f5,color:#333333,stroke:#999999,stroke-dasharray: 4 4;
+    classDef principal fill:#1E2761,color:#ffffff,stroke:#1E2761;
+    classDef alterno fill:#F2A541,color:#1E2761,stroke:#F2A541;
+    class PRE nota;
+    class P1,P2,P3,P4,P5,SIN principal;
+    class ALT1,ALT2 alterno;

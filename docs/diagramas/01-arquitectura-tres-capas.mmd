@@ -1,0 +1,45 @@
+flowchart LR
+    ADM(["Admin"])
+    USR(["User"])
+
+    subgraph T1["Tier 1 · Presentación (navegador)"]
+        WEB["App Web<br/>React + Vite + TypeScript"]
+    end
+
+    subgraph T2["Tier 2 · Lógica de negocio"]
+        subgraph API["Servidor API · NestJS (monolito modular)"]
+            DASH["Módulo Dashboard"]
+            USERS["Módulo Users"]
+            COM["Módulo Com.<br/>(Comunicaciones)"]
+        end
+        LLAM["Servicio de Llamadas<br/>(microservicio)"]
+    end
+
+    subgraph T3["Tier 3 · Datos"]
+        PG[("PostgreSQL")]
+        RD[("Redis<br/>(diferido)")]
+    end
+
+    MAIL["API Gmail<br/>(servicio externo)"]
+    LLAMEXT["API de Llamadas<br/>(servicio externo)"]
+
+    ADM -->|usa| WEB
+    USR -->|usa| WEB
+
+    WEB -->|"IApiRest (HTTP/JSON)"| API
+    WEB <-->|"IEventos (WebSocket)"| API
+    WEB -.->|"ILlamadasCliente (WebRTC)"| LLAM
+
+    DASH -->|"IEquipos"| USERS
+    DASH -->|"INotificar"| COM
+    COM -->|"IEquipos"| USERS
+    COM -->|"ISalaLlamada (HTTP)"| LLAM
+
+    API -->|"IPersistencia (SQL)"| PG
+    API -.->|"IEfimero (presencia, cache)"| RD
+
+    COM -->|"IEmail (SMTP)"| MAIL
+    LLAM -.->|"pendiente ADR 0002"| LLAMEXT
+
+    classDef externo fill:#eeeeee,stroke:#666666,stroke-dasharray: 5 5;
+    class MAIL,LLAMEXT externo;

@@ -1,0 +1,52 @@
+sequenceDiagram
+    autonumber
+    actor AD as Administrador
+    participant UI as Cliente React
+    participant API as API NestJS
+    participant PG as PostgreSQL
+    participant GW as Gateway Socket.IO
+    participant OT as Otros clientes
+
+    AD->>UI: Abre el selector de responsable de la tarjeta
+    UI->>API: GET /tarjetas/id/candidatos
+    API->>API: Valida sesion y membresia (RN-01) y determina si quien consulta es administrador
+    Note over API: Si quien consulta no es administrador no se devuelven niveles (RF-LAB-09)
+    API->>PG: Buscar los labels de la tarjeta marcados como habilidad
+    PG-->>API: Labels de habilidad de la tarjeta
+
+    alt La tarjeta no tiene labels de habilidad
+        API->>PG: Buscar los miembros del equipo
+        PG-->>API: Miembros
+        API-->>UI: Miembros sin niveles (RF-LAB-07)
+    else La tarjeta tiene labels de habilidad
+        API->>PG: Buscar el nivel de cada miembro en esos labels
+        PG-->>API: Niveles declarados
+        API-->>UI: Miembros con su nivel por label (bueno, regular, malo o sin responder)
+    end
+
+    UI-->>AD: Muestra el selector con los niveles
+    AD->>UI: Elige un miembro como responsable
+
+    opt Algun nivel del miembro elegido es malo (RF-LAB-08)
+        UI-->>AD: Advertencia - el miembro se declaro malo en un label de la tarjeta
+        AD->>UI: Confirma o cancela
+        break El administrador cancela
+            UI-->>AD: Cierra el selector sin cambios
+        end
+    end
+
+    UI->>API: PATCH /tarjetas/id/responsable (miembroId)
+    API->>API: Valida que el responsable sea miembro del mismo equipo (RN-07)
+    API->>PG: UPDATE responsable de la tarjeta
+    PG-->>API: ok
+    API-->>UI: 200 OK
+    UI-->>AD: Muestra el responsable en la tarjeta
+    API->>GW: Publicar tarjeta:actualizada
+    GW-->>OT: tarjeta:actualizada
+
+    opt El responsable tiene activa la notificacion de tarea asignada (RN-19)
+        API->>PG: INSERT notificacion (tipo tarea_asignada)
+        API->>GW: Enviar notificacion al responsable
+    end
+
+    Note over UI,API: El servidor no bloquea la asignacion, la advertencia solo informa (RF-LAB-08)

@@ -1,0 +1,162 @@
+erDiagram
+    Usuario ||--o{ Membresia : "tiene"
+    Equipo ||--o{ Membresia : "agrupa"
+    Equipo ||--o{ Canal : "posee"
+    Equipo ||--o{ ConversacionDirecta : "posee"
+    Equipo ||--o{ Rol : "define"
+    Equipo ||--o{ Label : "define"
+    Equipo ||--o{ Tarjeta : "contiene"
+    Equipo ||--o{ Notificacion : "contexto de"
+
+    Membresia ||--o{ MembresiaRol : "recibe"
+    Rol ||--o{ MembresiaRol : "se asigna en"
+
+    Membresia ||--o{ ConversacionDirecta : "participante A"
+    Membresia ||--o{ ConversacionDirecta : "participante B"
+    Canal |o--o{ Mensaje : "contiene"
+    ConversacionDirecta |o--o{ Mensaje : "contiene"
+    Membresia ||--o{ Mensaje : "escribe"
+
+    Tarjeta |o--o{ Tarjeta : "es padre de"
+    Membresia |o--o{ Tarjeta : "es responsable de"
+    Mensaje |o--o{ Tarjeta : "origina"
+    Encuesta |o--o{ Tarjeta : "origina"
+    Tarjeta ||--o{ TarjetaLabel : "se clasifica con"
+    Label ||--o{ TarjetaLabel : "clasifica"
+
+    Membresia ||--o{ NivelHabilidad : "declara"
+    Label ||--o{ NivelHabilidad : "se evalua en"
+
+    Canal ||--o{ Encuesta : "publica"
+    Tarjeta |o--o{ Encuesta : "origina votacion de responsable"
+    Membresia ||--o{ Encuesta : "crea"
+    Encuesta ||--|{ OpcionEncuesta : "ofrece"
+    Encuesta ||--o{ Voto : "recibe"
+    OpcionEncuesta ||--o{ Voto : "obtiene"
+    Membresia ||--o{ Voto : "emite"
+
+    Usuario ||--o{ Notificacion : "recibe"
+    Usuario ||--o{ PreferenciaNotificacion : "configura"
+    Usuario ||--o{ CanalSilenciado : "silencia"
+    Canal ||--o{ CanalSilenciado : "es silenciado en"
+
+    Usuario {
+        uuid id PK
+        string correo UK
+        string nombre
+        string contrasena_hash
+        timestamp creado_en
+    }
+    Equipo {
+        uuid id PK
+        string nombre
+        string codigo_invitacion UK "nulo si fue revocado"
+        timestamp creado_en
+    }
+    Membresia {
+        uuid id PK
+        uuid usuario_id FK "unico con equipo_id (RN-02)"
+        uuid equipo_id FK
+        boolean es_admin
+        timestamp unido_en
+    }
+    Rol {
+        uuid id PK
+        uuid equipo_id FK
+        string nombre
+    }
+    MembresiaRol {
+        uuid membresia_id PK, FK
+        uuid rol_id PK, FK
+    }
+    Canal {
+        uuid id PK
+        uuid equipo_id FK
+        string nombre "unico por equipo"
+        timestamp creado_en
+    }
+    ConversacionDirecta {
+        uuid id PK
+        uuid equipo_id FK
+        uuid membresia_a_id FK
+        uuid membresia_b_id FK "una conversacion por par (RN-10)"
+    }
+    Mensaje {
+        uuid id PK
+        uuid membresia_autor_id FK
+        uuid canal_id FK "nulo si es directo (RN-09)"
+        uuid conversacion_id FK "nulo si es de canal (RN-09)"
+        text texto
+        timestamp enviado_en
+    }
+    Tarjeta {
+        uuid id PK
+        uuid equipo_id FK
+        uuid padre_id FK "nulo si es tarea raiz"
+        uuid responsable_id FK "membresia, opcional"
+        uuid mensaje_origen_id FK "opcional (RF-CHA-09)"
+        uuid encuesta_origen_id FK "opcional (RF-VOT-06)"
+        string titulo
+        text descripcion
+        string columna "por_hacer, en_progreso, hecho"
+        int posicion
+        date fecha_limite
+        string color "paleta de 8, opcional"
+    }
+    Label {
+        uuid id PK
+        uuid equipo_id FK
+        string nombre "unico por equipo"
+        boolean es_habilidad
+    }
+    TarjetaLabel {
+        uuid tarjeta_id PK, FK
+        uuid label_id PK, FK
+    }
+    NivelHabilidad {
+        uuid membresia_id PK, FK
+        uuid label_id PK, FK "solo labels de habilidad (RN-08)"
+        string nivel "bueno, regular, malo"
+    }
+    Encuesta {
+        uuid id PK
+        uuid canal_id FK
+        uuid tarjeta_id FK "opcional, votacion de responsable (RF-VOT-07)"
+        uuid membresia_creador_id FK
+        string pregunta
+        boolean es_anonima
+        boolean cerrada
+        timestamp creada_en
+    }
+    OpcionEncuesta {
+        uuid id PK
+        uuid encuesta_id FK "minimo 2 opciones por encuesta (RN-16)"
+        string texto
+    }
+    Voto {
+        uuid id PK
+        uuid encuesta_id FK "unico con membresia_id (RN-17)"
+        uuid opcion_id FK
+        uuid membresia_id FK "no se expone si es anonima"
+    }
+    Notificacion {
+        uuid id PK
+        uuid usuario_id FK
+        uuid equipo_id FK
+        string tipo "mencion, tarea_asignada, encuesta, mensaje_canal"
+        string texto
+        string recurso_tipo
+        uuid recurso_id
+        boolean leida
+        timestamp creada_en
+    }
+    PreferenciaNotificacion {
+        uuid usuario_id PK, FK
+        string tipo PK
+        boolean activa_en_app
+        boolean activa_por_correo
+    }
+    CanalSilenciado {
+        uuid usuario_id PK, FK
+        uuid canal_id PK, FK
+    }
