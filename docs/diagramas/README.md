@@ -2,44 +2,62 @@
 Aquí se encuentran los diagramas técnicos en formato Mermaid.
 
 
-# Documentación Técnica de Diagramas — Slackless
+# Diagramas Técnicos y Casos de Uso — Slackless
 
-Este directorio consolida los modelos de arquitectura, datos y secuencias del sistema Slackless. Todos los esquemas están definidos en formato Mermaid.js conforme a la especificación estándar de modelado del proyecto.
+Esta carpeta contiene la documentación visual y el modelado técnico del sistema **Slackless**, estructurados en diagramas Mermaid y respaldados por la matriz de trazabilidad del proyecto.
 
-## 1. Inventario de Archivos
+## Índice de Archivos
 
-| Archivo | Tipo de Diagrama | Ámbito / Objeto del Modelo |
-| :--- | :--- | :--- |
-| `slackless-diagramas.md` | Documento Consolidado | Especificación completa e integrada en formato Markdown para lectura secuencial. |
-| `01-arquitectura-tres-capas.mmd` | Diagrama de Bloques (`flowchart LR`) | Arquitectura del sistema en tres capas, desacoplamiento de módulos NestJS y microservicios. |
-| `02-modelo-entidad-relacion.mmd` | Entidad-Relación (`erDiagram`) | Modelo relacional de la base de datos PostgreSQL (18 tablas principales y cardinalidades). |
-| `03-secuencia-mensaje-notificacion.mmd` | Diagrama de Secuencia (`sequenceDiagram`) | Protocolo de mensajería síncrona/asíncrona via WebSockets y pipeline de notificaciones (`RN-19`). |
-| `04-secuencia-cierre-padre.mmd` | Diagrama de Secuencia (`sequenceDiagram`) | Lógica de validación transaccional y respuesta HTTP frente al cierre de nodos padre (`RN-12`, `RN-13`). |
-| `05-secuencia-asignacion-habilidades.mmd` | Diagrama de Secuencia (`sequenceDiagram`) | Flujo de control de acceso por rol y evaluación de matriz de habilidades (`RF-LAB-07` a `09`). |
-| `06-caso-de-uso-mover-a-hecho.mmd` | Flujo de Procesos (`flowchart TD`) | Caso de uso detallado del requerimiento `RF-ARB-07` (Mover tarjeta a estado Hecho). |
+### Diagramas Individuales (.mmd)
+- **`01-arquitectura-tres-capas.mmd`**: Arquitectura general del sistema en tres capas (Presentación, Lógica de Negocio y Datos) con sus respectivos módulos y servicios externos.
+- **`02-modelo-entidad-relacion.mmd`**: Modelo Entidad-Relación (ERD) completo que incluye las 18 entidades del dominio y sus restricciones de integridad (RN).
+- **`03-secuencia-mensaje-notificacion.mmd`**: Diagrama de secuencia que detalla el flujo de envío de mensajes en tiempo real y la generación condicional de notificaciones.
+- **`04-secuencia-cierre-padre.mmd`**: Diagrama de secuencia correspondiente a la regla de negocio `RF-ARB-07` / `RN-12` (bloqueo de cierre de tareas padre con subtareas pendientes).
+- **`05-secuencia-asignacion-habilidades.mmd`**: Secuencia para la asignación de responsables basada en niveles de habilidad y permisos de administrador (`RF-LAB-09`).
+- **`06-caso-de-uso-mover-a-hecho.mmd`**: Diagrama de flujo detallado del caso de uso de `RF-ARB-07`.
+- **`07-casos-de-uso-cuentas-equipos.mmd`**: Casos de uso de `CU-01` a `CU-09` (Módulo Cuentas y Equipos) con jerarquía de actores y relaciones.
+- **`08-casos-de-uso-chat.mmd`**: Casos de uso de `CU-10` a `CU-16` (Módulo Chat) incluyendo interacciones y extensiones.
+- **`09-casos-de-uso-arbol-proyecto.mmd`**: Casos de uso de `CU-17` a `CU-24` (Módulo Árbol de Proyecto).
 
-## 2. Visualización y Mantenimiento
+### Archivos Consolidados
+- **`slackless-diagramas.md`**: Archivo que unifica los 9 diagramas anteriores en un solo documento de lectura continua.
 
-### Renderizado en GitHub
-El motor de GitHub renderiza automáticamente la sintaxis de Mermaid.js:
-- Para revisión integral del sistema, consultar `slackless-diagramas.md`.
-- Para inspección modular o diffs de control de versiones, consultar los archivos `.mmd` individuales.
+---
 
-### Entorno de Desarrollo Local (VS Code)
-Para trabajar de forma local con la documentación:
-1. Asegurar la presencia de la extensión `Markdown Preview Mermaid Support` en Visual Studio Code.
-2. Ejecutar el comando `Markdown: Open Preview` (`Ctrl+Shift+V` en Linux/Windows, `Cmd+Shift+V` en macOS) sobre cualquier archivo `.md` del directorio.
+## Instrucciones de Visualización y Edición
 
-### Edición y Exportación (Mermaid Live Editor)
-Para modificar sintaxis o exportar artefactos gráficos a formatos vectoriales o de mapa de bits (`SVG` / `PNG`):
-1. Copiar el bloque de código del archivo `.mmd` requerido.
-2. Cargar el texto en [Mermaid Live Editor](https://mermaid.live).
-3. Exportar mediante la opción *Actions* > *Download SVG* / *PNG*.
+1. **GitHub:** GitHub renderiza automáticamente el código de bloques `mermaid` dentro de los archivos Markdown (`.md`).
+2. **Editor Local (VS Code):** Se recomienda instalar la extensión *Markdown Preview Mermaid Support* para visualizar los diagramas directamente en el editor.
+3. **Mermaid Live Editor:** Puedes copiar cualquier bloque de código `.mmd` y pegarlo en [mermaid.live](https://mermaid.live) para exportarlo como imagen PNG o SVG si lo necesitas para un informe impreso.
 
-## 3. Trazabilidad de Reglas de Negocio y Requerimientos
+---
 
-- **`RN-01` / `RN-02`:** Validación de sesión activa JWT y aislamiento multitenant por equipo.
-- **`RN-06` / `RN-11`:** Restricciones sobre la estructura acíclica dirigida (DAG) del árbol de tareas.
-- **`RN-12` / `RN-13`:** Integridad referencial de estado: restrinja la transición a `HECHO` de un nodo padre si existen subtareas directas en estados `POR_HACER` o `EN_PROGRESO`.
-- **`RN-19`:** Filtrado y distribución de notificaciones considerando el nivel de presencia y silenciado de canales.
-- **`RF-LAB-07` a `09`:** Reglas de visibilidad del vector de habilidades de usuarios, acotado exclusivamente al rol de Administrador.
+## Observaciones e Inconsistencias Identificadas en el Proyecto
+
+Durante el análisis y modelado técnico, el equipo identificó las siguientes consideraciones prácticas:
+
+1. **Servicio de Llamadas frente al Alcance del Proyecto (Diagrama 1):**
+   * La pizarra inicial del equipo contemplaba un servicio de llamadas externo. Sin embargo, los requerimientos formales del proyecto limitan los servicios externos al correo electrónico. Se mantuvo en el diagrama como una propuesta futura o pendiente de definición (`ADR 0002`).
+
+2. **Estructura de Módulos del Servidor (Diagramas 1, 3, 4 y 5):**
+   * El esquema general presenta tres macromódulos físicos (`Dashboard`, `Users`, `Com.`), mientras que el desglose detallado funciona por áreas funcionales del SRS (`Kanban`, `Árbol`, `Chat`, etc.). Se interpretan las áreas grandes como contenedores físicos del monolito modular y las internas como la lógica de negocio específica.
+
+3. **Visibilidad del Rechazo al Cerrar Tareas con Subtareas Pendientes (Diagrama 4 - RF-ARB-07):**
+   * Inicialmente se consideró que un rechazo de cierre solo afectaría al usuario que arrastró la tarjeta. Para evitar desincronizaciones en tiempo real, se ajustó para que el servidor notifique a todos los clientes conectados la reversión de la tarjeta a su columna original.
+
+4. **Preguntas Abiertas en el Cierre y Reorganización (Diagrama 4):**
+   * Está pendiente confirmar el comportamiento exacto del sistema si una tarjeta que ya se encuentra en la columna "Hecho" recibe una nueva subtarea o se le reabre una tarea pendiente.
+
+5. **Alineación de Notificaciones y Base de Datos (Diagramas 2 y 3):**
+   * Se ajustó el diagrama de secuencia de notificaciones para utilizar los campos reales de la tabla de base de datos (`tipo`, `texto`, `recurso_tipo`, `recurso_id`) en lugar de referencias genéricas como "enlace".
+
+6. **Permisos al Consultar Niveles de Habilidad (Diagrama 5 - RF-LAB-09):**
+   * Todos los miembros pueden ver y asignar responsables, pero el servidor restringe la devolución de los niveles de habilidad (*bueno*, *regular*, *malo*) exclusivamente a los usuarios con rol de administrador.
+
+7. **Representación de Casos de Uso en Mermaid (Diagramas 7, 8 y 9):**
+   * Como Mermaid carece de un motor nativo formal de casos de uso UML con figuras de monigotes, se implementó mediante diagramas de flujo utilizando cajas estructuradas e íconos, conservando la lógica estricta de herencia de actores y dependencias (`include` / `extend`).
+
+8. **Detalles a Corregir en el Documento de Casos de Uso (`casos-de-uso.md`):**
+   * **Conteo pendiente:** La introducción menciona *"67 requerimientos agrupados en * casos de uso"*, omitiendo la cantidad cerrada (24 casos redactados en la versión actual).
+   * **Tabla de cobertura incompleta:** Actualmente solo detalla métricas para 3 de los 7 módulos del sistema.
+   * **Enlaces del índice:** Algunos enlaces del menú principal no funcionan correctamente debido a diferencias entre mayúsculas y guiones en los anclas de Markdown.
