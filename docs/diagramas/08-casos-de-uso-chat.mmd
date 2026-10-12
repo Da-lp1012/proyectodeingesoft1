@@ -1,0 +1,34 @@
+flowchart LR
+    MIE["👤 Miembro"]
+
+    subgraph SIS["Slackless · Chat"]
+        CU10(["CU-10 Crear canal"])
+        CU11(["CU-11 Consultar y entrar a canales"])
+        CU12(["CU-12 Enviar mensaje en un canal"])
+        CU13(["CU-13 Consultar historial de mensajes"])
+        CU14(["CU-14 Conversar en privado"])
+        CU15(["CU-15 Mencionar a un miembro"])
+        CU16(["CU-16 Crear tarea desde un mensaje"])
+    end
+
+    MIE --- CU10
+    MIE --- CU11
+    MIE --- CU12
+    MIE --- CU13
+    MIE --- CU14
+    MIE --- CU15
+    MIE --- CU16
+
+    CU15 -.->|"«extend» el mensaje contiene @nombre"| CU12
+    CU14 -.->|"«include» intercambio de mensajes"| CU12
+
+    LEG["Borde continuo: Must · Borde punteado: Should"]
+
+    classDef actor fill:#ffffff,stroke:#333333,stroke-width:2px;
+    classDef must fill:#e8eefc,stroke:#1E2761;
+    classDef should fill:#fff6e5,stroke:#F2A541,stroke-dasharray: 5 5;
+    classDef nota fill:#f5f5f5,stroke:#999999,color:#333333;
+    class MIE actor;
+    class CU10,CU11,CU12,CU13 must;
+    class CU14,CU15,CU16 should;
+    class LEG nota;
