@@ -1,0 +1,43 @@
+flowchart LR
+    VIS["👤 Visitante"]
+    USR["👤 Usuario"]
+    MIE["👤 Miembro"]
+    ADM["👤 Administrador"]
+
+    ADM -.->|"es un"| MIE
+    MIE -.->|"es un"| USR
+
+    subgraph SIS["Slackless · Cuentas y equipos"]
+        CU01(["CU-01 Registrar cuenta"])
+        CU02(["CU-02 Iniciar sesión"])
+        CU03(["CU-03 Cerrar sesión"])
+        CU04(["CU-04 Crear equipo"])
+        CU05(["CU-05 Gestionar código de invitación"])
+        CU06(["CU-06 Unirse a un equipo con código"])
+        CU07(["CU-07 Cambiar de equipo activo"])
+        CU08(["CU-08 Transferir la administración"])
+        CU09(["CU-09 Salir de un equipo"])
+    end
+
+    VIS --- CU01
+    VIS --- CU02
+    USR --- CU03
+    USR --- CU04
+    USR --- CU06
+    USR --- CU07
+    MIE --- CU09
+    ADM --- CU05
+    ADM --- CU08
+
+    CU08 -.->|"«extend» si es el único admin"| CU09
+
+    LEG["Borde continuo: Must · Borde punteado: Should"]
+
+    classDef actor fill:#ffffff,stroke:#333333,stroke-width:2px;
+    classDef must fill:#e8eefc,stroke:#1E2761;
+    classDef should fill:#fff6e5,stroke:#F2A541,stroke-dasharray: 5 5;
+    classDef nota fill:#f5f5f5,stroke:#999999,color:#333333;
+    class VIS,USR,MIE,ADM actor;
+    class CU01,CU02,CU03,CU04,CU05,CU06,CU07 must;
+    class CU08,CU09 should;
+    class LEG nota;

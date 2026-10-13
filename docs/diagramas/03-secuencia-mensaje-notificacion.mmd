@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+    actor A as Miembro autor
+    participant CA as Cliente React del autor
+    participant GW as Gateway Socket.IO
+    participant API as API NestJS - modulo Com.
+    participant PG as PostgreSQL
+    participant RD as Redis
+    participant CB as Clientes React de los demas miembros
+
+    A->>CA: Escribe el mensaje y pulsa Enviar
+    CA->>GW: emit mensaje:enviar (canalId, texto)
+    GW->>API: crearMensaje(usuario, canalId, texto)
+    API->>API: Valida sesion, membresia en el equipo y texto (RN-01, RNF-SEG-03)
+    API->>PG: INSERT mensaje (autor, canal, texto, fecha)
+    PG-->>API: Mensaje guardado (id, fecha)
+    API-->>GW: Mensaje guardado
+
+    par Entrega en tiempo real
+        GW-->>CA: emit mensaje:nuevo (sala del canal)
+    and
+        GW-->>CB: emit mensaje:nuevo (sala del canal)
+    end
+
+    Note over API,PG: Generacion de notificaciones (RF-NOT-01, RN-19)
+    API->>PG: Consultar miembros del equipo, sus preferencias y canales silenciados
+    PG-->>API: Destinatarios con preferencias
+
+    loop Por cada miembro destinatario distinto del autor
+        API->>API: Define el tipo: mencion si lo nombra con @, si no mensaje_canal
+        alt Tipo activo en sus preferencias y canal no silenciado
+            API->>PG: INSERT notificacion (usuario, equipo, tipo, texto, recurso)
+            opt Redis activo (diferido segun ADR 0001)
+                API->>RD: Consultar si el destinatario esta en linea
+                RD-->>API: Presencia
+            end
+            API->>GW: Enviar notificacion al destinatario conectado
+            GW-->>CB: emit notificacion:nueva (actualiza la campana)
+        else Tipo desactivado o canal silenciado
+            Note right of API: No se genera notificacion
+        end
+    end

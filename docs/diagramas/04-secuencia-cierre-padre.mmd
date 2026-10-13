@@ -1,0 +1,61 @@
+sequenceDiagram
+    autonumber
+    actor M as Miembro
+    participant UI as Cliente React
+    participant KAN as API NestJS - modulo Kanban
+    participant ARB as API NestJS - modulo Arbol
+    participant PG as PostgreSQL
+    participant GW as Gateway Socket.IO
+    participant OT as Otros clientes
+
+    alt Operacion A - Mover la tarjeta a Hecho (RF-ARB-07)
+        M->>UI: Arrastra la tarjeta a la columna Hecho y la suelta
+        UI->>KAN: PATCH /tarjetas/id/mover (columna=hecho, posicion)
+        KAN->>KAN: Verifica sesion y membresia del equipo (precondicion, RN-01)
+        KAN->>PG: BEGIN (operacion atomica)
+        KAN->>ARB: validarCierre(tarjetaId)
+        ARB->>PG: Consultar las subtareas directas de la tarjeta
+        PG-->>ARB: Subtareas directas con su columna
+        Note over ARB: Pendiente = subtarea directa en por_hacer o en_progreso. Si no tiene subtareas no hay nada que comprobar
+        ARB-->>KAN: Numero de subtareas pendientes (n)
+        alt Sin pendientes (n = 0)
+            KAN->>PG: UPDATE columna = hecho, posicion
+            KAN->>PG: COMMIT
+            KAN-->>UI: 200 OK
+            UI-->>M: La tarjeta queda en Hecho
+            KAN->>GW: Publicar tarjeta:movida
+            GW-->>OT: tarjeta:movida (los demas miembros ven el cambio)
+        else Hay pendientes (n mayor que 0)
+            KAN->>PG: ROLLBACK (no se modifica ningun dato)
+            KAN-->>UI: 409 Conflicto (pendientes = n)
+            UI-->>M: Devuelve la tarjeta a su columna original y muestra Tiene n subtarea(s) pendiente(s)
+            KAN->>GW: Publicar tarjeta:revertida (columna original)
+            GW-->>OT: tarjeta:revertida (la tarjeta sigue en su columna original)
+        end
+    else Operacion B - Cambiar la tarjeta de padre (RF-ARB-10, RF-ARB-11)
+        M->>UI: Elige un nuevo padre para la tarjeta
+        UI->>ARB: PATCH /tarjetas/id/padre (padreId)
+        ARB->>ARB: Verifica sesion y membresia del equipo (RN-01)
+        ARB->>PG: Cargar la tarjeta, el nuevo padre y los ancestros del nuevo padre
+        PG-->>ARB: Datos del arbol
+        alt El nuevo padre es de otro equipo (RN-06)
+            ARB-->>UI: 422 Rechazado
+            UI-->>M: El padre debe ser una tarjeta de tu equipo
+        else El nuevo padre es la misma tarjeta o una descendiente (RN-11)
+            ARB-->>UI: 422 Rechazado
+            UI-->>M: No se permiten ciclos en el arbol
+        else El nuevo padre esta en Hecho y la tarjeta no (RN-12)
+            Note over ARB: Regla propuesta, pendiente de confirmar con el equipo (pregunta abierta 1 de RF-ARB-07)
+            ARB-->>UI: 409 Conflicto
+            UI-->>M: El padre ya esta en Hecho y esta tarea sigue pendiente
+        else Cambio valido
+            ARB->>PG: UPDATE padre_id
+            PG-->>ARB: ok
+            ARB-->>UI: 200 OK
+            UI-->>M: Muestra el nuevo padre y actualiza el progreso
+            ARB->>GW: Publicar tarjeta:actualizada (incluye los padres afectados)
+            GW-->>OT: tarjeta:actualizada
+        end
+    end
+
+    Note over UI,OT: RN-13 - Ningun cambio en las subtareas mueve al padre automaticamente (RF-ARB-08)
