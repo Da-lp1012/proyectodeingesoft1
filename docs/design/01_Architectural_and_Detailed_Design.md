@@ -135,42 +135,40 @@ classDiagram
 
 | Question | Your answer, with evidence from your design |
 |---|---|
-| **Cohesion:** do the responsibilities inside each class or component belong together? | |
-| **Coupling:** how far does a change in one element spread? Where are the strongest dependencies? | |
-| **Information hiding:** what did you keep private or internal, and why? | |
+| **Cohesion:** do the responsibilities inside each class or component belong together? | `CompletionRule` tiene una sola razón de cambio: la definición de "subtarea pendiente" de RN-12 (si cambia, como en la Open Question 3 del REQ, solo cambia esta clase). `CardRepository` agrupa solo acceso a persistencia de tarjetas. `CardMoveService` solo decide si se mueve o no; no contiene la regla ni el acceso a datos. |
+| **Coupling:** how far does a change in one element spread? Where are the strongest dependencies? | La dependencia más fuerte es `CardMoveService`, con dos colaboradores (`CompletionRule` y `CardRepository`). `CompletionRule` solo depende de `Card`, por lo que un cambio en la persistencia no la alcanza. Un cambio en cómo se guardan las tarjetas se queda dentro de `CardRepository`. |
+| **Information hiding:** what did you keep private or internal, and why? | Los atributos de `Card`, `MoveResult` y los colaboradores de `CardMoveService` son privados. `Card.isDone()` oculta cómo se representa *Hecho* (RF-KAN-01), de modo que `CompletionRule` no compara columnas. `CardRepository` oculta cómo se persiste. `MoveResult` entrega datos (conteo), no el texto del mensaje, que es asunto de la interfaz (RNF-USA-02, RNF-USA-04). |
 
 **At least one real finding** (a problem you found in your own design) **and what you changed or would change:**
->
+> **Hallazgo 1 (cambiado).** La idea inicial era tener una clase que moviera la tarjeta padre según el resultado de sus hijas. Al revisarla frente a RF-ARB-08 y RN-13 (el padre nunca se mueve solo) se vio que, planteada así, invitaba a un movimiento automático cuando la última hija terminara. Se cambió: la clase que mueve (`CardMoveService`) solo actúa ante la solicitud explícita de un miembro, y la comprobación de las hijas quedó separada en `CompletionRule`.
+> **Hallazgo 2 (pendiente).** Este diseño no define cómo se logra la operación atómica que pide el Risk 2 del REQ (que leer las subtareas y guardar el movimiento no se intercalen con la acción de otro miembro). Para mantener el diagrama simple se dejó como responsabilidad de `CardRepository`, y el mecanismo concreto se decide en la implementación.
+> **[PENDIENTE: confirmar que el Hallazgo 1 refleja el proceso real del equipo.]**
 
 ---
 
 ## 5. Design Decisions & Decision Record
 
-Two decisions are required: one architectural (Class 11 level) and one detailed-design (Class 12 level). Avoid "it is best practice", "it scales" or "it is cleaner" without project evidence.
-
 ### Decision A — Architectural
 
 | | |
 |---|---|
-| **Context** (requirement, constraint or problem that motivated it) | |
-| **Decision** | |
-| **Rationale** (why it is reasonable here) | |
-| **Trade-off accepted** | |
+| **Context** (requirement, constraint or problem that motivated it) | RF-ARB-07 y RN-12 exigen que una tarjeta con subtareas pendientes no pueda quedar en *Hecho*. El Risk 1 del REQ (validar solo en la interfaz permite saltarse la regla) y el escenario AC-ARB-07.4 (petición directa al servidor) piden que la regla no dependa del cliente. RNF-SEG-02 exige verificar en el servidor. |
+| **Decision** | La regla de cierre se aplica en el servidor, en el módulo Dashboard de la capa de lógica de negocio, antes de guardar el movimiento. La interfaz solo solicita el movimiento y muestra el resultado. |
+| **Rationale** (why it is reasonable here) | Con la regla en el cliente, una petición enviada sin pasar por la interfaz dejaría el tablero en un estado contradictorio, que es lo que RF-ARB-07 busca evitar. Con la regla en el servidor, todos los caminos de entrada pasan por la misma validación, y el ADR 0001 ya eligió NestJS justamente para gestionar permisos y validar datos entrantes en el servidor. |
+| **Trade-off accepted** | La interfaz no sabe si el movimiento es válido hasta recibir la respuesta del servidor, por lo que debe revertir visualmente el arrastre si se rechaza, con la tensión que eso crea con el objetivo de actualizar el tablero sin parpadeos (ADR 0001). El REQ ya lo identifica como una de las causas de la confianza de estimación *Medium*. |
 
 ### Decision B — Detailed design
 
 | | |
 |---|---|
-| **Context** | |
-| **Decision** | |
-| **Rationale** | |
-| **Trade-off accepted** | |
+| **Context** | RN-12 es una de las reglas que RNF-MAN-02 exige proteger con pruebas automatizadas. RF-ARB-08 y RN-13 prohíben que el padre se mueva por sí solo. Las Open Questions 1 y 2 del REQ indican que otros flujos (crear subtarea, cambiar padre, reabrir una hija) podrían necesitar la misma regla en el futuro. |
+| **Decision** | Separar la regla de cierre en la clase `CompletionRule`, que solo recibe una lista de subtareas y devuelve cuántas están pendientes, de la clase `CardMoveService`, que atiende la solicitud explícita de mover. |
+| **Rationale** | `CompletionRule` se puede probar sin base de datos, que es lo que exige RNF-MAN-02. La definición de "pendiente" queda en un solo lugar (Open Question 3). Y `CardMoveService` solo se ejecuta ante una solicitud de un miembro, sin ruta automática. |
+| **Trade-off accepted** | Se agrega una clase y una dependencia a `CardMoveService` para una regla de una sola operación. Se consideró dejar la regla dentro de `CardMoveService` (menos elementos), pero probar RN-12 exigiría simular la persistencia. |
 
 ### ADR
 
-At least one of the two decisions above must also be recorded as an ADR (use `Plantilla_ADR_Nygard`) in `docs/decisions/`.
-
-**ADR file:** `docs/decisions/ADR-XXX-title.md` — records Decision [A / B].
+**ADR file:** `docs/adr/0003_Validacion_Cierre_En_Servidor.md` — records Decision A. *(Se numera 0003 porque el diagrama de tres capas reserva el ADR 0002 para el proveedor de llamadas. Sigue la estructura del ADR 0001.)*
 
 ---
 
