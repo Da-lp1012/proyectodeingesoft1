@@ -83,13 +83,11 @@ flowchart LR
 
 ## 3. Detailed Design
 
-*(Inward-facing: how is each selected component designed internally?)*
-
 ### 3.1 Components selected (at least two)
 
 | Component | Why it was selected (risk, complexity, centrality to the drivers) |
 |---|---|
-| | |
+| Módulo Dashboard | Contiene el requerimiento final, RF-ARB-07, que el equipo documentó como el más importante y complejo: cruza el movimiento de tarjetas (RF-KAN-04), la jerarquía de subtareas (RF-ARB-01, RF-ARB-02) y la propagación en tiempo real (RF-KAN-05), y protege la regla RN-12, que RNF-MAN-02 exige cubrir con pruebas automatizadas. |
 
 ### 3.2 Class Diagram(s)
 
