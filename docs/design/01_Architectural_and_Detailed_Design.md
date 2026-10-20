@@ -16,28 +16,31 @@ HOW TO USE THIS TEMPLATE
 7. Read Design_Deliverable_1_Example.md for the expected level of detail. Do not copy it.
 -->
 
-# [Project Name] — Architectural & Detailed Design v1.0
+# [Slackless] — Architectural & Detailed Design v1.0
 
 | | |
 |---|---|
-| **Team** | |
-| **Members** | |
+| **Team** |Grupo 2 |
+| **Members** |David Esteban Raigosa Socha, Deisy Viviana Lara Sisa, Hare Zeiyiukuin Atehortua Rincon, Fredy Humberto Garzon Salgado, Silvana Ramirez Ardila |
 | **Status** | Draft / Ready for review |
-| **Date** | |
+| **Date** |2026-10-09 |
 | **Inputs** | `docs/requirements/`, Architectural Hypothesis v0.1 (Class 11), Detailed Design v0.1 (Class 12) |
 
 ---
 
 ## 1. System Overview & Design Drivers
 
-**System purpose** (2–3 sentences, in terms of the need it satisfies)
->
+**System purpose** 
+> Slackless es una aplicación web para equipos pequeños que integra chat por canales, un tablero kanban con árbol de tareas, notificaciones y votaciones. Ayuda a sus integrantes a coordinar el trabajo en un mismo espacio y permite que sus líderes consulten el avance de las tareas.
 
 **Requirements that shape the structure** *(the ones that most influence the design, not all of them)*
 
 | Requirement / Use Case ID | Why it shapes the structure | Quality attribute, constraint or business rule involved |
 |---|---|---|
-| | | |
+| RF-ARB-07 / Mover una tarea a Hecho | El servidor debe comprobar las subtareas directas antes de guardar el cambio de columna. | RN-12, RNF-SEG-02 |
+| RF-KAN-04 / Mover tarjetas | El sistema debe procesar el movimiento de una tarjeta y actualizar el tablero. | RNF-REN-01, RNF-REN-02 |
+| RF-KAN-05 / Actualización del tablero en tiempo real | Los cambios deben llegar a los demás clientes sin recargar la página. | RNF-REN-01, RNF-REN-02 |
+| RN-01 / Membresía del equipo | Las operaciones deben comprobar que el usuario pertenece al equipo propietario del recurso. | RNF-SEG-02 |
 
 ---
 
@@ -88,6 +91,8 @@ flowchart LR
 | Component | Why it was selected (risk, complexity, centrality to the drivers) |
 |---|---|
 | Módulo Dashboard | Contiene el requerimiento final, RF-ARB-07, que el equipo documentó como el más importante y complejo: cruza el movimiento de tarjetas (RF-KAN-04), la jerarquía de subtareas (RF-ARB-01, RF-ARB-02) y la propagación en tiempo real (RF-KAN-05), y protege la regla RN-12, que RNF-MAN-02 exige cubrir con pruebas automatizadas. |
+
+> El diseño detallado de esta entrega se concentra en RF-ARB-07. La arquitectura general representa el alcance principal de Slackless; el análisis interno de clases y comportamiento se desarrolla aquí para el componente Dashboard, responsable de esta regla.
 
 ### 3.2 Class Diagram(s)
 
