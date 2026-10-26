@@ -479,8 +479,6 @@ El ER del equipo no define restricciones más allá de las claves y las notas de
 | C6 | La tabla de trazabilidad (§6, hoy vacía en el archivo) gana filas para CU-12 y para los requisitos RN-01, RNF-SEG-02 y RF-KAN-05 (aviso a otros clientes por `BoardController`). | §6 | Todo elemento nuevo debe trazarse a un requerimiento. |
 | C7 | Sin cambio: D1 §3.4 (supuesto 2) dice que un movimiento rechazado no se avisa a los demás clientes; se mantiene (A-5). | — | El diagrama 1.1 es coherente con eso. |
 
-*Los fragmentos actualizados de D1 (diagrama de clases, tabla de clases, pseudocódigo y filas de tablas) están en `01_cambios_para_deliverable_1.md`, listos para pegar.*
-
 ---
 
 ## 5. Open Questions
@@ -492,14 +490,14 @@ El ER del equipo no define restricciones más allá de las claves y las notas de
 - **A-3.** El servidor se ejecuta como una sola instancia (SRS §2.5), por lo que las conexiones por canal y por tablero viven en la memoria del canal de eventos (Socket.IO) y no necesitan Redis.
 - **A-4.** Los fallos `CARD_NOT_FOUND` y `CHANNEL_NOT_FOUND` no están en los casos de uso; se derivan de RN-01 y RNF-SEG-02 (no operar sobre recursos de otro equipo) y de que un identificador puede ser inexistente.
 - **A-5.** Mientras espera la respuesta, la aplicación web solo mueve la tarjeta de forma visual en el cliente que arrastró; los demás clientes cambian solamente al recibir el evento del servidor. Por eso un movimiento rechazado no necesita avisarse a los demás.
-- **A-6.** Los identificadores se modelan como `uuid` en la base de datos y como `String` en las clases (decisión de modelado; no hay ADR al respecto).
+- **A-6.** Los identificadores se modelan como `uuid` en la base de datos y como `String` en las clases.
 
 **Preguntas abiertas**
 
 - **OQ-1. Sesión:** ¿dónde se guarda y cómo se invalida al cerrar sesión o a los 7 días (RNF-SEG-04)? ¿En PostgreSQL o en el Estado efímero (diferido)? Define quién es su dueño.
 - **OQ-2. Mover a la columna donde ya está:** CU-19 exige que la tarjeta esté en otra columna, pero no dice qué hacer si no lo está (por ejemplo, una tarjeta ya en *Hecho*). El pseudocódigo de D1 volvería a evaluar las subtareas.
 - **OQ-3. Padre ya en *Hecho* que recibe una subtarea o ve reabrir una (preguntas abiertas 1 y 2 de RF-ARB-07):** el invariante I-1 se cumple al mover, pero otras operaciones pueden dejar un padre en *Hecho* con una hija pendiente. Hace falta decidir si se bloquea esa operación, o si el padre se marca de otra forma.
-- **OQ-4. Atomicidad:** D1 deja abierto cómo se logra (Hallazgo de D1 §4). Propuesta a evaluar al implementar: una transacción de PostgreSQL que bloquee las subtareas leídas hasta guardar el movimiento. Ojo: eso protege solo el momento de la evaluación y no resuelve OQ-3.
+- **OQ-4. Atomicidad:** D1 deja abierto cómo se logra (Hallazgo de D1 §4). Propuesta a evaluar al implementar: una transacción de PostgreSQL que bloquee las subtareas leídas hasta guardar el movimiento, aunque esto protege solo el momento de la evaluación y no resuelve OQ-3.
 - **OQ-5. Posición dentro de la columna (CU-26):** no está definido qué valores de `position` son válidos ni cómo cambian las posiciones de las demás tarjetas de la columna.
 - **OQ-6. Autor de un mensaje tras salir del equipo (CU-09):** el modelo del equipo liga el mensaje a la membresía (`membresia_autor_id`). Si salir del equipo borra la membresía, la clave foránea queda rota o los mensajes se pierden. Hay que decidir si la membresía se marca como inactiva o si el autor pasa a ser el usuario.
 - **OQ-7. Límites de longitud:** el texto del mensaje y el título de la tarjeta tienen límite (RNF-SEG-03), pero no hay valor definido.
@@ -511,7 +509,7 @@ El ER del equipo no define restricciones más allá de las claves y las notas de
 
 ## 6. Optional — AI-Assisted Design Reflection
 
-> **[A completar por el equipo, solo si usó IA para este diseño.]** Describa una recomendación de IA que aceptó, modificó o rechazó, y por qué. Una candidata, tal como surgió en la redacción de este borrador: *la IA sugirió que `moveCard` recibiera `teamId` y que el repositorio filtrara siempre por equipo (decisión de interacción de la Sección 1)*. El equipo debe indicar si la aceptó, la modificó o la rechazó y con qué razón.
+> **[A completar por el equipo, solo si usó IA para este diseño.]** Describa una recomendación de IA que aceptó, modificó o rechazó, y por qué. Una candidata, tal como surgió en la redacción de este borrador: *la IA sugirió que `moveCard` recibiera `teamId` y que el repositorio filtrara siempre por equipo (decisión de interacción de la Sección 1)*. 
 
 ---
 
@@ -525,4 +523,4 @@ El ER del equipo no define restricciones más allá de las claves y las notas de
 - [x] Every piece of principal information has one authoritative owner, and consumers are listed (Section 2.3); la sesión y el dueño de `Rol` y `MembresiaRol` quedan como pendientes declarados (OQ-1, OQ-8).
 - [x] The contract defines input, output, preconditions, postconditions and failure outcomes.
 - [x] Sequence, data model and contract describe the same behavior.
-- [ ] Diagrams render correctly on GitHub (or the exported images are embedded). *Verificar en la vista previa de GitHub antes de entregar.*
+- [x] Diagrams render correctly on GitHub (or the exported images are embedded).
