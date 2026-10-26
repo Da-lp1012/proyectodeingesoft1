@@ -509,7 +509,7 @@ El ER del equipo no define restricciones más allá de las claves y las notas de
 
 ## 6. Optional — AI-Assisted Design Reflection
 
-> **[A completar por el equipo, solo si usó IA para este diseño.]** Describa una recomendación de IA que aceptó, modificó o rechazó, y por qué. Una candidata, tal como surgió en la redacción de este borrador: *la IA sugirió que `moveCard` recibiera `teamId` y que el repositorio filtrara siempre por equipo (decisión de interacción de la Sección 1)*. 
+> Describa una recomendación de IA que aceptó, modificó o rechazó, y por qué. Una candidata, tal como surgió en la redacción de este borrador: *la IA sugirió que `moveCard` recibiera `teamId` y que el repositorio filtrara siempre por equipo (decisión de interacción de la Sección 1)*. 
 
 ---
 
