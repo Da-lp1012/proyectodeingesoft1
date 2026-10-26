@@ -173,9 +173,8 @@ sequenceDiagram
 | Encuestas, opciones y votos | CU-37 a CU-40 | Yes | Un voto por miembro y un resultado fijo al cerrar (RN-17, RN-18) requieren guardarlos. |
 | Notificaciones, preferencias y canales silenciados | CU-34 a CU-36 | Yes | La campana muestra notificaciones pasadas y las preferencias son por usuario (RN-19). |
 | Progreso del padre ("3/5"), cuenta de subtareas pendientes y color efectivo de una tarjeta | CU-18, CU-19, CU-24 | No | Se calculan cada vez a partir de las subtareas y los colores propios (RF-ARB-05, RN-15). Guardarlos podría dejarlos desactualizados. |
-| Columnas del tablero | CU-19, CU-26 | No | Son tres valores fijos (RF-KAN-01), no información que cambie. Se representan con la enumeración `Column` y con una restricción de valores en `Tarjeta.columna`. |
+| Columna en la que está cada tarjeta | CU-19, CU-26 | Yes | Son tres valores fijos (RF-KAN-01), no información que cambie. Se representan con la enumeración `Column` y con una restricción de valores en `Tarjeta.columna`. |
 | Resultado del movimiento (`MoveResult`) | CU-19 | No | Es la respuesta de una operación y no tiene vida después de ella. |
-| Presencia ("en línea"), estado "escribiendo" y miembros con un canal o el tablero abierto | CU-12, CU-19 (a quién enviar el evento) | No | Es estado de conexión, corto y de poca importancia; el ADR 0001 lo separa de la base principal. Con un solo servidor (A-3) lo mantiene en memoria el canal de eventos en tiempo real; el almacén efímero (diferido) solo entraría con varias instancias. |
 | Entrega de los correos de notificación | CU-36 | No | La entrega la hace el proveedor externo (API Gmail); solo se guarda la preferencia `activa_por_correo`. |
 | Sesión del usuario | CU-02, CU-03 | Pending | El modelo de datos no tiene una entidad de sesión; el ADR 0001 menciona la caché de sesión en el almacén efímero, que está diferido (OQ-1). |
 
