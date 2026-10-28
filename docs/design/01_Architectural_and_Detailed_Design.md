@@ -16,31 +16,32 @@ HOW TO USE THIS TEMPLATE
 7. Read Design_Deliverable_1_Example.md for the expected level of detail. Do not copy it.
 -->
 
-# [Slackless] — Architectural & Detailed Design v1.0
+# Slackless — Architectural & Detailed Design v1.0
 
 | | |
 |---|---|
-| **Team** |Grupo 2 |
-| **Members** |David Esteban Raigosa Socha, Deisy Viviana Lara Sisa, Hare Zeiyiukuin Atehortua Rincon, Fredy Humberto Garzon Salgado, Silvana Ramirez Ardila |
-| **Status** | Draft / Ready for review |
-| **Date** |2026-10-09 |
-| **Inputs** | `docs/requirements/`, Architectural Hypothesis v0.1 (Class 11), Detailed Design v0.1 (Class 12) |
+| **Team** | Grupo 2 |
+| **Members** | David Esteban Raigosa Socha, Deisy Viviana Lara Sisa, Hare Zeiyiukuin Atehortua Rincon, Fredy Humberto Garzon Salgado, Silvana Ramirez Ardila |
+| **Status** | Ready for review |
+| **Date** | 2026-10-19 |
+| **Inputs** | `docs/requerimientos/` (REQ de RF-ARB-07, SRS, casos de uso), Architectural Hypothesis v0.1 (`docs/design/01-arquitectura-tres-capas.mmd`), ADR 0001 (`docs/adr/0001_Eleccion_Stack.md`), ADR 0003 (`docs/adr/0003_Validacion_Cierre_En_Servidor.md`), Detailed Design v0.1 (Class 12) |
 
 ---
 
 ## 1. System Overview & Design Drivers
 
 **System purpose** 
-> Slackless es una aplicación web para equipos pequeños que integra chat por canales, un tablero kanban con árbol de tareas, notificaciones y votaciones. Ayuda a sus integrantes a coordinar el trabajo en un mismo espacio y permite que sus líderes consulten el avance de las tareas.
+> Slackless es una aplicación web para equipos de 3 a 8 personas que reúne en un solo lugar el chat por canales, un tablero kanban con árbol de tareas, roles según habilidades declaradas, notificaciones configurables y votaciones dentro del chat (SRS §1.2). Su usuario objetivo necesita arrancar en minutos sin saturarse de funciones, y su líder necesita que el tablero no mienta sobre el avance real (SRS §2.3).
 
 **Requirements that shape the structure** *(the ones that most influence the design, not all of them)*
 
 | Requirement / Use Case ID | Why it shapes the structure | Quality attribute, constraint or business rule involved |
 |---|---|---|
-| RF-ARB-07 / Mover una tarea a Hecho | El servidor debe comprobar las subtareas directas antes de guardar el cambio de columna. | RN-12, RNF-SEG-02 |
-| RF-KAN-04 / Mover tarjetas | El sistema debe procesar el movimiento de una tarjeta y actualizar el tablero. | RNF-REN-01, RNF-REN-02 |
-| RF-KAN-05 / Actualización del tablero en tiempo real | Los cambios deben llegar a los demás clientes sin recargar la página. | RNF-REN-01, RNF-REN-02 |
-| RN-01 / Membresía del equipo | Las operaciones deben comprobar que el usuario pertenece al equipo propietario del recurso. | RNF-SEG-02 |
+| RF-ARB-07 / CU-19 "Mover una tarea con subtareas a *Hecho*" | La regla debe aplicarse en el servidor, antes de guardar el movimiento; una validación solo en la interfaz se puede saltar (Risk 1 del REQ, AC-ARB-07.4). | RN-12, RNF-SEG-02, RNF-SEG-03 |
+| RF-KAN-04 / CU-26 "Mover una tarjeta entre columnas" | El sistema debe procesar el movimiento de una tarjeta entre las tres columnas fijas y actualizar el tablero. | RF-KAN-01, RNF-REN-01, RNF-REN-02 |
+| RF-CHA-04, RF-KAN-05 / Actualización en tiempo real | Mensajes y cambios del tablero deben llegar a los demás clientes sin recargar, en máximo 1 s: hace falta un canal de eventos en tiempo real entre el servidor y la aplicación web. | RNF-REN-01, RNF-REN-02; ADR 0001 (Socket.IO) |
+| RN-01 / Membresía del equipo | Cada operación sobre recursos de equipo comprueba en el servidor que el usuario pertenece al equipo propietario del recurso. | RN-01, RNF-SEG-02; ADR 0001 (guards de NestJS) |
+| Todos los RF / Organización modular | Servidor organizado en módulos por área funcional (monolito modular), separando la información estructurada (usuarios, tableros, tareas, mensajes) de los datos efímeros (presencia, "escribiendo", caché; diferido). | RNF-MAN-04, RNF-CON-02, RES-01; ADR 0001 (React, NestJS, PostgreSQL, Redis) |
 
 ---
 
@@ -52,35 +53,68 @@ HOW TO USE THIS TEMPLATE
 
 | Outside the system | Type (actor / external system / hardware) | How the system interacts with it |
 |---|---|---|
-| | | |
+| Admin | Actor (persona) | Usa la aplicación web para administrar su equipo (rol con permisos de administración, RN-04). |
+| User | Actor (persona) | Usa la aplicación web para chatear, gestionar tareas y votar. |
+| API Gmail | External system | El módulo Com. se apoya en ella para enviar correo (notificación por correo, RF-NOT-06, *Should*). |
+| API de Llamadas | External system | El Servicio de Llamadas se apoyaría en ella; la decisión está pendiente del ADR 0002. |
+
+*Dentro de la frontera quedan la aplicación web, el servidor API con sus módulos, el Servicio de Llamadas y los dos almacenes de datos, porque el equipo los construye, despliega y controla.*
 
 ### 2.2 Components, Responsibilities & Capabilities
 
 Cover the principal functional scope of your whole system.
 
 ```mermaid
-flowchart LR
-    Actor([User or external actor])
-    subgraph SYS["System name"]
-        C1["Component 1"]
-        C2["Component 2"]
-        C3["Component 3"]
+flowchart TB
+    ADM(["Admin"])
+    USR(["User"])
+
+    subgraph T1["Tier 1 — Presentación (navegador)"]
+        WEB["App Web<br/>React + Vite + TypeScript"]
     end
-    Ext[("External system")]
 
-    Actor --> C1
-    C1 -->|"capability requested"| C2
-    C2 -->|"capability requested"| C3
-    C3 -->|"capability requested"| Ext
+    subgraph T2["Tier 2 — Lógica de negocio"]
+        subgraph API["Servidor API — NestJS (monolito modular)"]
+            DASH["Módulo Dashboard"]
+            USERS["Módulo Users"]
+            COM["Módulo Com.<br/>(Comunicaciones)"]
+        end
+        LLAM["Servicio de Llamadas<br/>(microservicio)"]
+    end
+
+    subgraph T3["Tier 3 — Datos"]
+        PG[("PostgreSQL")]
+        RD[("Redis<br/>(diferido)")]
+    end
+
+    MAIL["API Gmail<br/>(servicio externo)"]
+    LLAMEXT["API de Llamadas<br/>(servicio externo)"]
+
+    ADM -->|usa| WEB
+    USR -->|usa| WEB
+
+    WEB -->|"HTTP/JSON y WebSocket"| API
+    API --> PG
+    API -.-> RD
+
+    COM --> LLAM
+    COM --> MAIL
+    WEB -.->|"WebRTC"| LLAM
+    LLAM -.->|"pendiente ADR 0002"| LLAMEXT
+
+    classDef externo fill:#eeeeee,stroke:#666666,stroke-dasharray: 5 5;
+    class MAIL,LLAMEXT externo;
 ```
-
-*(Everything inside `SYS` is what you build and control. Everything outside is what you only interact with. Label each arrow with the capability being requested.)*
 
 | Component | Main responsibility | Requirements / use cases supported | Provided capabilities | Required capabilities | Main dependencies |
 |---|---|---|---|---|---|
-| | | | | | |
-
-*Checks: is every component named by responsibility, not technology ("the component that persists orders", not "the database")? Does any component exist only to make the diagram look more complex?*
+| Aplicación web (`App Web`) | Presentar la interfaz, enviar las solicitudes del usuario y mostrar sus resultados (por ejemplo, revertir un arrastre rechazado). | Requerimientos de interfaz (`RNF-USA-*`) y todos los casos de uso del usuario (`CU-01` a `CU-40`) | Interfaz de usuario para miembros y administradores | Datos y eventos en tiempo real del Servidor API (HTTP/JSON y WebSocket); llamadas de voz del Servicio de Llamadas (WebRTC) | Servidor API, Servicio de Llamadas |
+| Módulo Dashboard | Gestionar el tablero kanban, el árbol de tareas (incluidas las reglas de cierre y de jerarquía) y los labels y habilidades. | `RF-KAN-*` (`CU-25` a `CU-29`), `RF-ARB-*` (`CU-17` a `CU-24`, entre ellos `RF-ARB-07`), `RF-LAB-*` (`CU-30` a `CU-33`) | Operaciones del tablero, árbol de tareas y habilidades a la aplicación web | Persistencia de datos estructurados | Persistencia de datos estructurados |
+| Módulo Users | Gestionar cuentas, sesiones y equipos (membresías y códigos de invitación). | `RF-CUE-*` (`CU-01` a `CU-09`) | Operaciones de cuentas y equipos a la aplicación web | Persistencia de datos estructurados | Persistencia de datos estructurados |
+| Módulo Com. (Comunicaciones) | Gestionar las comunicaciones del equipo: chat por canales y mensajes directos, votaciones, notificaciones, llamadas y envío de correo. | `RF-CHA-*` (`CU-10` a `CU-16`), `RF-NOT-*` (`CU-34` a `CU-36`), `RF-VOT-*` (`CU-37` a `CU-40`) | Operaciones de comunicación, encuestas y notificaciones a la aplicación web | Servicio de Llamadas; envío de correo (`API Gmail`); persistencia y estado efímero | Servicio de Llamadas, API Gmail, Persistencia de datos estructurados, Estado efímero |
+| Servicio de Llamadas | Gestionar las llamadas de voz entre miembros (propuesta futura, pendiente de ADR 0002). | N/A: propuesta en evaluación fuera del SRS actual (ADR 0002) | Llamadas de voz a la aplicación web (WebRTC) y al módulo Com. | Proveedor externo de llamadas (pendiente ADR 0002) | API de Llamadas |
+| Persistencia de datos estructurados (`PostgreSQL`) | Guardar usuarios, equipos, tableros, tareas, encuestas y mensajes con integridad relacional (PostgreSQL, ADR 0001). | `RNF-CON-02` | Almacenamiento y consulta de datos estructurados | — | — |
+| Estado efímero (`Redis`, diferido) | Guardar presencia, "escribiendo" y caché (Redis, ADR 0001). | `RNF-REN-01`, `RNF-REN-02` (soporte para eventos efímeros y presencia) | Almacenamiento de datos efímeros | — | — |
 
 ---
 
@@ -189,6 +223,10 @@ moveCard(cardId, targetColumn) -> MoveResult
 10  RETURN MoveResult.success()
 ```
 
+*Supuestos: (1) la verificación de membresía (RN-01, RNF-SEG-02) la hace un guard de NestJS antes de llegar a este servicio, como indica el ADR 0001; (2) quien invoca el servicio avisa a los demás clientes por WebSocket cuando `isMoved() = true` (RF-KAN-05, RNF-REN-02). La operación solo se ejecuta cuando un miembro la solicita; ningún cambio en las subtareas dispara el movimiento del padre (RF-ARB-08, RN-13).*
+
+---
+
 ## 4. Design Quality — Cohesion, Coupling, Information Hiding
  
 | Question | Your answer, with evidence from your design |
@@ -198,8 +236,8 @@ moveCard(cardId, targetColumn) -> MoveResult
 | **Information hiding:** what did you keep private or internal, and why? | Los atributos de `Card` y `MoveResult` son privados, y también las clases que usa `CardMoveService`. El constructor de `MoveResult` también es privado: solo se puede crear con `success()` o `blocked(n)`, así que no puede existir un resultado contradictorio (por ejemplo, "movido" y con subtareas pendientes). `Card.isDone()` esconde cómo se representa *Hecho* (RF-KAN-01), así que `CompletionRule` no tiene que comparar columnas. `CardRepository` esconde cómo se guardan los datos. `MoveResult` solo entrega números (si se movió y cuántas subtareas faltan); el texto del mensaje lo arma la interfaz (RNF-USA-02, RNF-USA-04). |
  
 **At least one real finding** (a problem you found in your own design) **and what you changed or would change:**
-> **Hallazgo (pendiente de resolver).** Todavía no está definido cómo se asegura que leer las subtareas y guardar el movimiento pasen "de una sola vez", sin que otro miembro cambie algo en medio (Risk 2 del REQ). Por ejemplo, si alguien devuelve una subtarea a *En progreso* justo mientras se mueve el padre a *Hecho*, el padre podría quedar en *Hecho* con una hija abierta. En el diagrama solo lo dejamos anotado en una nota sobre `CardMoveService`, porque todavía no sabemos cómo se logra.
-> **Lo que cambiaríamos:** que `CardRepository` haga la lectura y el guardado dentro de una sola transacción de PostgreSQL, de modo que si algo cambia en medio, el movimiento no se guarde. Esto ya aparece como riesgo de atomicidad en el ADR 0003; el mecanismo exacto se decide cuando se implemente.
+> **Hallazgo 1 (cambiado).** La idea inicial era tener una clase que moviera la tarjeta padre según el resultado de sus hijas. Al revisarla frente a RF-ARB-08 y RN-13 (el padre nunca se mueve solo) se vio que, planteada así, invitaba a un movimiento automático cuando la última hija terminara. Se cambió: la clase que mueve (`CardMoveService`) solo actúa ante la solicitud explícita de un miembro, y la comprobación de las hijas quedó separada en `CompletionRule`.
+> **Hallazgo 2 (pendiente de resolver).** Todavía no está definido cómo se asegura que leer las subtareas y guardar el movimiento pasen "de una sola vez", sin que otro miembro cambie algo en medio (Risk 2 del REQ). Por ejemplo, si alguien devuelve una subtarea a *En progreso* justo mientras se mueve el padre a *Hecho*, el padre podría quedar en *Hecho* con una hija abierta. En el diagrama solo lo dejamos anotado en una nota sobre `CardMoveService`. Lo que cambiaríamos es que `CardRepository` haga la lectura y el guardado dentro de una sola transacción de PostgreSQL (registrado como riesgo de atomicidad en el ADR 0003).
  
 ---
  
@@ -233,25 +271,31 @@ moveCard(cardId, targetColumn) -> MoveResult
 
 | Requirement ID | Use Case | Component(s) | Class(es) |
 |---|---|---|---|
-| | | | |
-
-*(Every requirement in Section 1 must appear. Every component and class should appear at least once. If an element traces to nothing, ask why it exists.)*
+| RF-ARB-07, RN-12 | CU-19 — Mover una tarjeta con subtareas a *Hecho* | Módulo Dashboard, Aplicación web, Persistencia de datos estructurados | `CardMoveService`, `CompletionRule`, `CardRepository`, `Card`, `Column`, `MoveResult` |
+| RF-KAN-04, RF-KAN-01 | CU-26 — Mover una tarjeta entre columnas | Módulo Dashboard, Aplicación web, Persistencia de datos estructurados | `CardMoveService`, `CardRepository`, `Card`, `Column`, `MoveResult` |
+| RF-KAN-05, RNF-REN-01, RNF-REN-02 | CU-19, CU-26 — Actualización del tablero en tiempo real | Módulo Dashboard, Aplicación web, Estado efímero | `CardMoveService`, `MoveResult` (quien invoca el servicio emite el evento por WebSocket) |
+| RN-01, RNF-SEG-02 | Todos los casos de uso sobre recursos de equipo | Módulo Dashboard, Módulo Users, Módulo Com. | Guard de membresía de NestJS (previo a `CardMoveService`) |
+| RNF-CON-02, RNF-SEG-03 | CU-19, CU-26 — Persistencia e integridad del movimiento | Módulo Dashboard, Persistencia de datos estructurados | `CardRepository` (guarda solo un movimiento válido) |
+| RNF-MAN-02 | CU-19 — Prueba automatizada de RN-12 | Módulo Dashboard | `CompletionRule`, `Card` |
+| RF-CUE-* | CU-01 a CU-09 — Cuentas y equipos | Módulo Users, Aplicación web, Persistencia de datos estructurados | N/A: no se detalla en esta entrega |
+| RF-CHA-*, RF-NOT-*, RF-VOT-* | CU-10 a CU-16, CU-34 a CU-40 — Chat, notificaciones y votaciones | Módulo Com., Aplicación web, Persistencia de datos estructurados, Estado efímero | N/A: no se detalla en esta entrega |
+| Propuesta de llamadas (pendiente ADR 0004) | Llamadas de voz entre miembros | Servicio de Llamadas, Módulo Com., Aplicación web | N/A: pendiente de ADR 0004 |
 
 ---
 
 ## 7. Optional — AI-Assisted Design Reflection
 
-> One design recommendation generated by AI that the team accepted, modified or rejected, and why.
+> Aceptamos la sugerencia de la IA de incluir la clase `MoveResult` en el diagrama de clases con constructor privado y métodos de fábrica (`success()` y `blocked(pendingCount)`). En nuestra idea inicial pensábamos devolver solo un estado simple o manejar el aviso por separado, pero `MoveResult` nos permitió empaquetar tanto si la tarjeta se movió (`moved`) como la cantidad exacta de subtareas pendientes (`pendingCount`) que exige mostrar RF-ARB-07, evitando estados contradictorios y dejando que la interfaz arme el mensaje para el usuario.
 
 ---
 
 ## 8. Consistency Checklist
 
-- [ ] Every component in the diagram appears in the responsibilities table, and the other way around.
-- [ ] Every class belongs to an identifiable component.
-- [ ] Components are named by responsibility, not technology.
-- [ ] Nothing inside the system boundary is something you do not control.
-- [ ] Provided and required capabilities match across components (what one requires, another provides).
-- [ ] Both decisions name a real cost or limitation, and at least one has an ADR.
-- [ ] The traceability table has no empty rows and no orphan components or classes.
-- [ ] Diagrams render correctly on GitHub (or the exported images are embedded).
+- [x] Every component in the diagram appears in the responsibilities table, and the other way around.
+- [x] Every class belongs to an identifiable component. *(Todas las clases de la sección 3 pertenecen al Módulo Dashboard).*
+- [x] Components are named by responsibility, not technology. *(En la tabla 2.2 se nombran por su responsabilidad y se aclara su correspondencia con el ADR 0001).*
+- [x] Nothing inside the system boundary is something you do not control. *(API Gmail y API de Llamadas quedan fuera de la frontera).*
+- [x] Provided and required capabilities match across components (what one requires, another provides).
+- [x] Both decisions name a real cost or limitation, and at least one has an ADR. *(Decision A registrada en `docs/adr/0003_Validacion_Cierre_En_Servidor.md`).*
+- [x] The traceability table has no empty rows and no orphan components or classes.
+- [x] Diagrams render correctly on GitHub (or the exported images are embedded).
