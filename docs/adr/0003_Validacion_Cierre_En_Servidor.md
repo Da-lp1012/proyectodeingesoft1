@@ -1,6 +1,6 @@
 # ADR 0003: Validación de la regla de cierre de tareas en el servidor
 
-* **Estatus:** Propuesto
+* **Estatus:** Aprobado
 * **Fecha:** 2026-10-19
 * **Autores:** David Esteban Raigosa Socha  
 &emsp; &emsp; &ensp; &nbsp; Deisy Viviana Lara Sisa  
