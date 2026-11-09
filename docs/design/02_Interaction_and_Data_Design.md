@@ -5,10 +5,12 @@
 | **Team**    | Grupo 2                                                                                                                                      |
 | **Members** | David Esteban Raigosa Socha, Deisy Viviana Lara Sisa, Hare Zeiyiukuin Atehortua Rincon, Fredy Humberto Garzon Salgado, Silvana Ramirez Ardila |
 | **Status**  | Ready for review                                                                                                                             |
-| **Date**    | 2026-10-25                                                                                                                                   |
+| **Date**    | 2026-11-09                                                                                                                                   |
 | **Inputs**  | `docs/design/01_Architectural_and_Detailed_Design.md` (Deliverable 1), Use Cases CU-12 y CU-19 de `docs/requirements/` (casos-de-uso.md) y el Use Case detallado de `RF-ARB-07.md`, modelo entidad-relación del equipo (`02-modelo-entidad-relacion.mmd`), Interaction & Contracts Design v0.1 (Class 13) |
 
 *Convenciones: las entidades de datos usan los nombres del modelo entidad-relación del equipo (`Tarjeta`) y las clases de Deliverable 1 van en inglés (`Card`). Los identificadores `A-n` son supuestos (Sección 5) y `OQ-n` son preguntas abiertas (Sección 5).*
+
+*Actualización del 2026-11-09 (Cambio C8): el diagrama 1.1 llamaba dos veces a `moveCard`. La primera llamada (aplicación web → `BoardController`) pasa a ser `requestMoveCard(teamId, cardId, targetColumn, position, userId)`; la segunda (`BoardController` → `CardMoveService`) sigue siendo `moveCard(teamId, cardId, targetColumn, position)`. Los diagramas 1.1 y 1.2 muestran las barras de activación (especificaciones de ejecución) y la Sección 3 documenta el contrato de las siete operaciones.*
 
 ---
 
@@ -34,60 +36,72 @@ sequenceDiagram
     participant OTH as Aplicación web de otros miembros
 
     M->>WEB: Arrastra la tarjeta a Hecho y la suelta
-    WEB->>BC: moveCard(teamId, cardId, DONE, position)
+    activate WEB
+    WEB->>BC: requestMoveCard(teamId, cardId, DONE, position, userId)
+    activate BC
+    Note over WEB,BC: userId lo fija el servidor desde la sesión (A-2) y no viene del cuerpo de la petición
     BC->>BC: valida los datos de entrada (RNF-SEG-03)
     break Datos inválidos (columna inexistente, posición inválida o identificador mal formado)
         BC-->>WEB: INVALID_INPUT
         WEB-->>M: Devuelve la tarjeta e indica el dato inválido
     end
-    BC->>USR: findMembership(userId, teamId)
-    USR->>DB: buscar la membresía del usuario en el equipo
-    DB-->>USR: membresía o ninguna
-    USR-->>BC: membresiaId o ninguna
+    BC->>+USR: findMembership(userId, teamId)
+    USR->>+DB: buscar la membresía del usuario en el equipo
+    DB-->>-USR: membresía o ninguna
+    USR-->>-BC: membresiaId o ninguna
     break No es miembro del equipo (RN-01, AC-ARB-07.4)
         BC-->>WEB: ACCESS_DENIED
         WEB-->>M: Devuelve la tarjeta e informa que no tiene acceso
     end
-    BC->>SVC: moveCard(teamId, cardId, DONE, position)
-    SVC->>REPO: findById(teamId, cardId)
-    REPO->>DB: leer la tarjeta del equipo
-    DB-->>REPO: tarjeta o ninguna
-    REPO-->>SVC: Card o ausente
+    BC->>+SVC: moveCard(teamId, cardId, DONE, position)
+    SVC->>+REPO: findById(teamId, cardId)
+    REPO->>+DB: leer la tarjeta del equipo
+    DB-->>-REPO: tarjeta o ninguna
+    REPO-->>-SVC: Card o ausente
     break La tarjeta no existe en ese equipo
         SVC-->>BC: CARD_NOT_FOUND
         BC-->>WEB: CARD_NOT_FOUND
         WEB-->>M: Devuelve la tarjeta e informa que ya no existe
     end
     Note over SVC,DB: Lectura de subtareas y guardado deben ser una sola operación atómica (Risk 2 del REQ)
-    SVC->>REPO: findDirectSubtasks(cardId)
-    REPO->>DB: leer las subtareas directas
-    DB-->>REPO: subtareas
-    REPO-->>SVC: List de Card
-    SVC->>RULE: countPending(subtasks)
-    RULE-->>SVC: pending
+    SVC->>+REPO: findDirectSubtasks(cardId)
+    REPO->>+DB: leer las subtareas directas
+    DB-->>-REPO: subtareas
+    REPO-->>-SVC: List de Card
+    SVC->>+RULE: countPending(subtasks)
+    RULE-->>-SVC: pending
     alt pending = 0 (flujo principal, también si no tiene subtareas)
-        SVC->>REPO: updateColumn(cardId, DONE, position)
-        REPO->>DB: guardar columna = DONE y posición
-        DB-->>REPO: confirmado
-        SVC-->>BC: MoveResult.success()
+        SVC->>+REPO: updateColumn(cardId, DONE, position)
+        REPO->>+DB: guardar columna = DONE y posición
+        DB-->>-REPO: confirmado
+        REPO-->>-SVC: confirmado
+        SVC-->>-BC: MoveResult.success()
         BC-->>WEB: MOVED
         WEB-->>M: La tarjeta queda en Hecho
         BC->>OTH: evento tarjeta movida (WebSocket)
+        activate OTH
+        OTH->>OTH: actualiza su tablero (RF-KAN-05)
+        deactivate OTH
     else pending mayor que 0 (flujo alterno 2a, RN-12)
-        SVC-->>BC: MoveResult.blocked(pending)
+        activate SVC
+        SVC-->>-BC: MoveResult.blocked(pending)
         BC-->>WEB: BLOCKED (pendingCount = pending)
         WEB-->>M: Devuelve la tarjeta y muestra Tiene n subtareas pendientes
     end
+    deactivate BC
+    deactivate WEB
 ```
+
+*Barras de activación: cada barra va desde que el participante recibe la llamada hasta que devuelve su respuesta. Las llamadas a `findMembership`, `findById`, `findDirectSubtasks`, `countPending` y `updateColumn` abren y cierran su barra dentro de la barra de quien las llama. Los bloques `break` no cierran la barra de `BoardController`, `CardMoveService` ni de la aplicación web: en Mermaid las barras se cuentan en el orden en que aparecen en el texto, y esas tres participan también en el camino principal que sigue al `break`. La barra de `CardMoveService` sí termina dentro de cada rama final del `alt`, porque ahí devuelve su resultado a `BoardController`.*
 
 | Use Case step or flow | Message(s) in the diagram | Information exchanged | Operation defined in (Deliverable 1) |
 |---|---|---|---|
-| Main flow, step 1 (CU-19 paso 1; RF-ARB-07 paso 1) | `moveCard(teamId, cardId, DONE, position)` de la aplicación web a `BoardController` | `teamId`, `cardId`, columna destino `DONE` y posición (CU-26); el usuario se toma de la sesión | `BoardController.moveCard`: **nueva** (Cambio C1) |
+| Main flow, step 1 (CU-19 paso 1; RF-ARB-07 paso 1) | `requestMoveCard(teamId, cardId, DONE, position, userId)` de la aplicación web a `BoardController`; después, `moveCard(teamId, cardId, DONE, position)` de `BoardController` a `CardMoveService` | `teamId`, `cardId`, columna destino `DONE` y posición (CU-26), más el `userId` del solicitante, que el servidor toma de la sesión (A-2) | `BoardController.requestMoveCard`: **nueva** (Cambios C1 y C8). `CardMoveService.moveCard` conserva su firma (Cambio C2) |
 | Precondición (RF-ARB-07: sesión, pertenencia al equipo y la tarjeta existe) | `findMembership(userId, teamId)` con su consulta de membresía; `findById(teamId, cardId)` | `userId`, `teamId` → `membresiaId` o ninguna; `cardId` → tarjeta | `TeamMembership.findMembership`: **nueva**, capacidad del Módulo Users (Cambio C4); D1 §3.4 la suponía en un *guard* de NestJS. `CardRepository.findById`: **nueva** (Cambio C3) |
 | Main flow, step 2 (verifica las subtareas directas; RF-ARB-07 pasos 2 y 3) | `findDirectSubtasks`, `countPending` | `cardId` → subtareas con su columna; subtareas → `pending` (0 si no tiene subtareas, RF-ARB-07 paso 3) | `CardRepository.findDirectSubtasks`, `CompletionRule.countPending` (D1 §3.2) |
-| Main flow, step 3 (mueve y guarda; RF-ARB-07 pasos 4 y 5: mover y mostrar a los demás) | `updateColumn`, `MoveResult.success()`, `MOVED`, evento a otros clientes | `cardId`, `DONE`, `position` → confirmación; evento `tarjeta movida` | `CardRepository.updateColumn`, `MoveResult.success()` (D1 §3.2); el aviso lo hace quien invoca el servicio (D1 §3.4, supuesto 2) |
+| Main flow, step 3 (mueve y guarda; RF-ARB-07 pasos 4 y 5: mover y mostrar a los demás) | `updateColumn`, `MoveResult.success()`, `MOVED`, evento a otros clientes | `cardId`, `DONE`, `position` → confirmación; evento `tarjeta movida` | `CardRepository.updateColumn`, `MoveResult.success()` (D1 §3.2); el aviso lo hace `BoardController.requestMoveCard` (D1 §3.4, supuesto 2) |
 | Alternative flow 2a (hay subtareas pendientes; RN-12; Alternative Flow de RF-ARB-07) | rama `pending mayor que 0`: `MoveResult.blocked(pending)` y `BLOCKED` | `pendingCount` (número de subtareas directas fuera de *Hecho*) | `MoveResult.blocked` (D1 §3.2). El texto «Tiene n subtareas pendientes» lo arma la interfaz |
-| Alternative flow 3a (terminar la última subtarea no mueve al padre; RN-13) | Ningún mensaje: el padre solo cambia con una solicitud `moveCard` explícita | — | `CardMoveService` solo actúa ante solicitud de un miembro (D1 §3.4 y Decision B de D1 §5; RN-13) |
+| Alternative flow 3a (terminar la última subtarea no mueve al padre; RN-13) | Ningún mensaje: el padre solo cambia con una solicitud `requestMoveCard` explícita | — | `CardMoveService` solo actúa ante solicitud de un miembro (D1 §3.4 y Decision B de D1 §5; RN-13) |
 | Exception (petición sin permiso: escenario AC-ARB-07.4 y RNF-SEG-02; el Use Case de RF-ARB-07 declara su Exception como N/A) | primer `break`: `ACCESS_DENIED` | resultado de `findMembership` | `TeamMembership.findMembership` (Cambio C4) |
 | Exception (entrada inválida, RNF-SEG-03) | `break` de datos inválidos: `INVALID_INPUT` | columna, posición o identificadores mal formados | Validación en `BoardController` (Cambio C1) |
 | Exception derivada (la precondición «la tarjeta existe» no se cumple) | `break` de tarjeta ausente: `CARD_NOT_FOUND` | resultado de `findById` | `CardRepository.findById` (Cambio C3). **El caso de uso no la describe**: ver A-4 |
@@ -107,34 +121,41 @@ sequenceDiagram
     participant OTH as Aplicación web de otros miembros
 
     M->>WEB: Escribe el texto y lo envía
+    activate WEB
     WEB->>COM: sendMessage(teamId, channelId, text)
+    activate COM
     COM->>COM: valida el texto (no vacío y longitud máxima) (RNF-SEG-03)
     break Texto vacío o demasiado largo (alterno 1a)
         COM-->>WEB: INVALID_MESSAGE
         WEB-->>M: No se envía e indica el motivo
     end
-    COM->>USR: findMembership(userId, teamId)
-    USR->>DB: buscar la membresía del usuario en el equipo
-    DB-->>USR: membresía o ninguna
-    USR-->>COM: membresiaId o ninguna
+    COM->>+USR: findMembership(userId, teamId)
+    USR->>+DB: buscar la membresía del usuario en el equipo
+    DB-->>-USR: membresía o ninguna
+    USR-->>-COM: membresiaId o ninguna
     break No es miembro del equipo (RN-01)
         COM-->>WEB: ACCESS_DENIED
         WEB-->>M: Informa que no tiene acceso al canal
     end
-    COM->>DB: buscar el canal del equipo (teamId, channelId)
-    DB-->>COM: canal o ninguno
+    COM->>+DB: buscar el canal del equipo (teamId, channelId)
+    DB-->>-COM: canal o ninguno
     break El canal no existe en ese equipo
         COM-->>WEB: CHANNEL_NOT_FOUND
         WEB-->>M: Informa que el canal no existe
     end
-    COM->>DB: guardar el mensaje (canal, autor, texto, fecha y hora)
-    DB-->>COM: mensaje guardado (messageId, sentAt)
+    COM->>+DB: guardar el mensaje (canal, autor, texto, fecha y hora)
+    DB-->>-COM: mensaje guardado (messageId, sentAt)
     COM-->>WEB: SENT (messageId, sentAt)
     WEB-->>M: Muestra el mensaje enviado
     COM->>OTH: evento mensaje nuevo a quienes tienen el canal abierto (WebSocket)
+    activate OTH
+    OTH->>OTH: muestra el mensaje nuevo en el canal abierto
+    deactivate OTH
     opt El mensaje contiene menciones (CU-15)
         Note over COM: Las menciones se procesan según CU-15, fuera de este diagrama
     end
+    deactivate COM
+    deactivate WEB
 ```
 
 | Use Case step or flow | Message(s) in the diagram | Information exchanged | Operation defined in (Deliverable 1) |
@@ -428,31 +449,168 @@ El ER del equipo no define restricciones más allá de las claves y las notas de
 
 ## 3. Interface Contract
 
-**Interaction chosen** (from diagram 1.1, message `moveCard(teamId, cardId, DONE, position)`): acuerdo entre la **aplicación web** y el **Módulo Dashboard** para mover una tarjeta de columna. Es la operación que concreta el requerimiento final RF-ARB-07.
+Esta sección documenta el contrato de las siete operaciones que intervienen en el diagrama 1.1 (CU-19, requerimiento final RF-ARB-07). La primera, `requestMoveCard`, es el acuerdo entre la **aplicación web** y el **Módulo Dashboard**. Las otras seis son acuerdos internos entre clases de Dashboard y con el Módulo Users.
+
+| # | Operación | Clase (componente) | La invoca | Contrato |
+|---|---|---|---|---|
+| 3.1 | `requestMoveCard(teamId, cardId, targetColumn, position, userId)` | `BoardController` (Módulo Dashboard) | La aplicación web | Verificación inicial: entrada y membresía |
+| 3.2 | `moveCard(teamId, cardId, targetColumn, position)` | `CardMoveService` (Módulo Dashboard) | `BoardController.requestMoveCard` | Regla de cierre y guardado |
+| 3.3 | `findMembership(userId, teamId)` | `TeamMembership` (capacidad del Módulo Users) | `BoardController.requestMoveCard` | Consulta de membresía |
+| 3.4 | `findById(teamId, cardId)` | `CardRepository` (Módulo Dashboard) | `CardMoveService.moveCard` | Búsqueda de la tarjeta en el equipo |
+| 3.5 | `findDirectSubtasks(cardId)` | `CardRepository` (Módulo Dashboard) | `CardMoveService.moveCard` | Lectura de subtareas directas |
+| 3.6 | `countPending(subtasks)` | `CompletionRule` (Módulo Dashboard) | `CardMoveService.moveCard` | Conteo de subtareas pendientes |
+| 3.7 | `updateColumn(cardId, column, position)` | `CardRepository` (Módulo Dashboard) | `CardMoveService.moveCard` | Guardado de columna y posición |
+
+*Convenciones.* Los tipos y valores son los de Deliverable 1 (§3.2): `Column` es `TO_DO`, `IN_PROGRESS` o `DONE` (en la base: `por_hacer`, `en_progreso`, `hecho`). Los identificadores son `String` en las clases y `uuid` en la base (A-6). «Ausente» significa que la operación no encontró lo que se le pidió y lo dice con un valor vacío, no con un fallo. Los fallos (`INVALID_INPUT`, `ACCESS_DENIED`, `CARD_NOT_FOUND`) cortan la operación sin guardar nada y no son un `MoveResult` (D1 §3.2).
+
+### 3.1 `BoardController.requestMoveCard`
+
+**Interaction chosen** (from diagram 1.1, message `requestMoveCard(teamId, cardId, DONE, position, userId)`): acuerdo entre la **aplicación web** y el **Módulo Dashboard** para mover una tarjeta de columna. Es la operación que concreta el requerimiento final RF-ARB-07. Recibe los mismos parámetros que `CardMoveService.moveCard` (3.2) y agrega `userId` al final.
 
 | Element | Specification |
 |---|---|
-| **Operation and purpose** | `moveCard`, ofrecida por el Módulo Dashboard (`BoardController`). Mueve una tarjeta del tablero del equipo a otra columna; cuando el destino es *Hecho*, aplica antes la regla RN-12 (RF-ARB-07). |
-| **Input** (parameters and types) | `teamId : String`; `cardId : String`; `targetColumn : Column` (`TO_DO`, `IN_PROGRESS` o `DONE`; en la base se guardan como `por_hacer`, `en_progreso`, `hecho`); `position : Integer` (posición dentro de la columna; valores válidos en OQ-5). La identidad del solicitante (`userId`) la toma el servidor de la sesión; el cliente no la envía. |
+| **Operation and purpose** | `requestMoveCard`, ofrecida por el Módulo Dashboard (`BoardController`). Hace la verificación inicial de la solicitud de mover una tarjeta (entrada válida y solicitante miembro del equipo) y, solo si pasa, delega en `CardMoveService.moveCard`. Mueve una tarjeta del tablero del equipo a otra columna; cuando el destino es *Hecho*, la regla RN-12 se aplica en `moveCard` (RF-ARB-07). |
+| **Input** (parameters and types) | `teamId : String`; `cardId : String`; `targetColumn : Column`; `position : Integer` (posición dentro de la columna; valores válidos en OQ-5); `userId : String` (identidad de quien solicita el movimiento). Los cuatro primeros son exactamente los de `moveCard`. `userId` lo fija el servidor a partir de la sesión (A-2); si la petición del cliente trae uno propio, se descarta. |
 | **Output** (successful result and data structure) | Respuesta con `outcome : MOVED o BLOCKED` y `pendingCount : Integer` (0 si `MOVED`; 1 o más si `BLOCKED`). Corresponde a `MoveResult.isMoved()` y `MoveResult.getPendingCount()` de D1. El texto del mensaje lo arma la interfaz. |
-| **Preconditions** (what the caller must satisfy before invoking) | Hay sesión activa. `teamId` y `cardId` tienen formato válido, `targetColumn` es uno de los tres valores y `position` es válida (RNF-SEG-03). La tarjeta no está ya en `targetColumn` (CU-19; qué pasa si lo está es OQ-2). *El caller no necesita demostrar que es miembro: la operación lo verifica; si no lo es, falla con `ACCESS_DENIED`.* |
+| **Preconditions** (what the caller must satisfy before invoking) | Hay sesión activa y de ella sale `userId` (A-2). `teamId` y `cardId` tienen formato válido, `targetColumn` es uno de los tres valores y `position` es válida (RNF-SEG-03). La tarjeta no está ya en `targetColumn` (CU-19; qué pasa si lo está es OQ-2). *El caller no necesita demostrar que es miembro: la operación lo verifica con `findMembership`; si no lo es, falla con `ACCESS_DENIED`.* |
 | **Postconditions** (what is guaranteed on successful completion) | **Si `MOVED`:** la tarjeta está en `targetColumn` y `position`, y el cambio persiste (RNF-CON-02). Si `targetColumn` es `DONE`, ninguna de sus subtareas directas estaba fuera de *Hecho* cuando se evaluó. Los demás miembros del equipo que tienen el tablero abierto reciben el evento `tarjeta movida` en máximo 1 s (RNF-REN-02).<br>**Si `BLOCKED`:** la tarjeta sigue en su columna original, no se modificó ningún dato, `pendingCount` es el número de subtareas directas fuera de *Hecho* y no se envió ningún evento. |
-| **Failure outcomes** (each failure, and what state is left after it) | `INVALID_INPUT`: columna inexistente, posición inválida o identificador mal formado (CU-26, alterno 2b); no se ejecuta ninguna operación, estado intacto (RNF-SEG-03).<br>`ACCESS_DENIED`: el usuario no es miembro del equipo `teamId`; estado intacto y no se revela si la tarjeta existe (RN-01, AC-ARB-07.4).<br>`CARD_NOT_FOUND`: no existe una tarjeta `cardId` en el equipo `teamId` (incluye tarjetas de otros equipos); estado intacto. |
-| **Invariants and side effects** (what must stay true, what may change) | **Invariantes.** I-1 (RN-12): la operación nunca deja en *Hecho* una tarjeta con subtareas directas fuera de *Hecho* en el momento de evaluarla. I-2 (RN-13): lo único que cambia es la columna y la posición de `cardId`; ninguna otra tarjeta, y en particular ningún padre, cambia de columna (el posible reacomodo de posiciones es OQ-5). I-3 (RNF-SEG-03): no hay operaciones parciales; la lectura de las subtareas y el guardado forman una sola unidad (mecanismo: OQ-4). I-4 (RN-01, RN-06): toda lectura y escritura de tarjetas filtra por `teamId`.<br>**Efectos secundarios.** Solo uno: el evento `tarjeta movida` hacia los demás clientes del equipo, y únicamente cuando el resultado es `MOVED`. |
+| **Failure outcomes** (each failure, and what state is left after it) | `INVALID_INPUT`: columna inexistente, posición inválida, o `teamId`, `cardId` o `userId` ausentes o mal formados (CU-26, alterno 2b); no se ejecuta ninguna operación, estado intacto (RNF-SEG-03).<br>`ACCESS_DENIED`: `findMembership(userId, teamId)` devolvió ausente, es decir, el usuario no es miembro del equipo `teamId`; estado intacto y no se revela si la tarjeta existe (RN-01, AC-ARB-07.4).<br>`CARD_NOT_FOUND`: lo propaga `moveCard`; no existe una tarjeta `cardId` en el equipo `teamId` (incluye tarjetas de otros equipos); estado intacto. |
+| **Invariants and side effects** (what must stay true, what may change) | **Invariantes.** I-1 (RN-12): la operación nunca deja en *Hecho* una tarjeta con subtareas directas fuera de *Hecho* en el momento de evaluarla. I-2 (RN-13): lo único que cambia es la columna y la posición de `cardId`; ninguna otra tarjeta, y en particular ningún padre, cambia de columna (el posible reacomodo de posiciones es OQ-5). I-3 (RNF-SEG-03): no hay operaciones parciales; la lectura de las subtareas y el guardado forman una sola unidad (mecanismo: OQ-4). I-4 (RN-01, RN-06): toda lectura y escritura de tarjetas filtra por `teamId`. I-5 (RN-01): `moveCard` solo se invoca después de validar la entrada y de confirmar la membresía; no hay otra ruta de entrada que mueva tarjetas.<br>**Efectos secundarios.** Solo uno: el evento `tarjeta movida` hacia los demás clientes del equipo, y únicamente cuando el resultado es `MOVED`. |
+
+**Testable examples** (`ana` es miembro del equipo A; `luis` no lo es)
+
+| Case | Before | Request | Expected |
+|---|---|---|---|
+| Padre con todas las subtareas terminadas | Tarjeta P en `IN_PROGRESS` con subtareas S1 y S2, ambas en `DONE` | `requestMoveCard(equipoA, P, DONE, 1, ana)` | `MOVED`, `pendingCount = 0`; P en `DONE`; evento enviado |
+| Padre sin subtareas | Tarjeta Q en `TO_DO` sin subtareas | `requestMoveCard(equipoA, Q, DONE, 1, ana)` | `MOVED`, `pendingCount = 0`; Q en `DONE` |
+| Una subtarea pendiente (AC-ARB-07.1) | P en `IN_PROGRESS` con S1 en `DONE` y S2 en `IN_PROGRESS` | `requestMoveCard(equipoA, P, DONE, 1, ana)` | `BLOCKED`, `pendingCount = 1`; P sigue en `IN_PROGRESS`; sin evento |
+| Varias pendientes (AC-ARB-07.3) | P con 5 subtareas: 3 en `DONE`, 1 en `TO_DO` y 1 en `IN_PROGRESS` | `requestMoveCard(equipoA, P, DONE, 1, ana)` | `BLOCKED`, `pendingCount = 2`; P no cambia |
+| Terminar la última subtarea no mueve al padre (RN-13) | P en `IN_PROGRESS` con una sola subtarea S en `IN_PROGRESS` | `requestMoveCard(equipoA, S, DONE, 1, ana)` | `MOVED` para S; P sigue en `IN_PROGRESS` |
+| Destino distinto de *Hecho* | P con S1 en `TO_DO`, P en `TO_DO` | `requestMoveCard(equipoA, P, IN_PROGRESS, 1, ana)` | `MOVED`; la regla RN-12 no se aplica |
+| Petición directa sin permiso (AC-ARB-07.4) | `luis` no es miembro del equipo A | `requestMoveCard(equipoA, P, DONE, 1, luis)` | `ACCESS_DENIED`; P no cambia; `moveCard` no se invoca |
+| Tarjeta de otro equipo | `ana` es miembro de A; la tarjeta X es del equipo B | `requestMoveCard(equipoA, X, DONE, 1, ana)` | `CARD_NOT_FOUND`; X no cambia |
+| Columna inexistente | Cualquier tarjeta | `requestMoveCard(equipoA, P, "ARCHIVADA", 1, ana)` | `INVALID_INPUT`; P no cambia; `findMembership` no se invoca |
+| `userId` ausente | Cualquier tarjeta | `requestMoveCard(equipoA, P, DONE, 1, "")` | `INVALID_INPUT`; P no cambia; `findMembership` no se invoca |
+
+### 3.2 `CardMoveService.moveCard`
+
+Es el contrato de la operación que ya tenía Deliverable 1 (§3.4). Se conserva y se verifica contra el contrato de 3.1: produce los mismos resultados (`MOVED` como `MoveResult.success()` y `BLOCKED` como `MoveResult.blocked(n)`), cumple las invariantes I-1 a I-4 y es la única operación que decide la regla RN-12. Lo que no hace es validar la entrada ni comprobar la membresía: eso lo hace `requestMoveCard` antes de llamarla (D1 §3.3).
+
+| Element | Specification |
+|---|---|
+| **Operation and purpose** | `moveCard`, ofrecida por `CardMoveService`. Atiende la solicitud explícita de un miembro de mover una tarjeta: la busca en el equipo, aplica la regla RN-12 cuando el destino es *Hecho* y guarda la columna y la posición solo si la regla se cumple. |
+| **Input** (parameters and types) | `teamId : String`; `cardId : String`; `targetColumn : Column`; `position : Integer`. No recibe `userId`: la identidad ya fue comprobada por quien la invoca. |
+| **Output** (successful result and data structure) | `MoveResult`. `MoveResult.success()`: `isMoved() = true` y `getPendingCount() = 0`. `MoveResult.blocked(n)`: `isMoved() = false` y `getPendingCount() = n`, con `n` de 1 o más. |
+| **Preconditions** (what the caller must satisfy before invoking) | La entrada ya fue validada (formatos, `targetColumn` válida, `position` válida) y el solicitante ya fue verificado como miembro de `teamId`. La tarjeta no está ya en `targetColumn` (OQ-2). |
+| **Postconditions** (what is guaranteed on successful completion) | **Si devuelve `success()`:** la tarjeta `cardId` está en `targetColumn` y `position`, y el cambio persiste. Si `targetColumn` es `DONE`, ninguna subtarea directa estaba fuera de *Hecho* cuando se evaluó.<br>**Si devuelve `blocked(n)`:** no se modificó ningún dato y `n` es el número de subtareas directas fuera de *Hecho*. |
+| **Failure outcomes** (each failure, and what state is left after it) | `CARD_NOT_FOUND`: `findById(teamId, cardId)` devolvió ausente (no existe o es de otro equipo); no se guarda nada. No define `INVALID_INPUT` ni `ACCESS_DENIED`. |
+| **Invariants and side effects** (what must stay true, what may change) | **Invariantes.** I-1 a I-4 de 3.1. La lectura de las subtareas (`findDirectSubtasks`) y el guardado (`updateColumn`) forman una sola operación atómica (Risk 2 del REQ, OQ-4). Cuando `targetColumn` no es `DONE`, la regla RN-12 no se aplica y no se leen las subtareas (RF-KAN-04).<br>**Efectos secundarios.** Un solo guardado en la persistencia, y solo con `success()`. No emite eventos ni conoce HTTP ni WebSocket. |
 
 **Testable examples**
 
 | Case | Before | Request | Expected |
 |---|---|---|---|
-| Padre con todas las subtareas terminadas | Tarjeta P en `IN_PROGRESS` con subtareas S1 y S2, ambas en `DONE` | `moveCard(equipoA, P, DONE, 1)` por un miembro de A | `MOVED`, `pendingCount = 0`; P en `DONE`; evento enviado |
-| Padre sin subtareas | Tarjeta Q en `TO_DO` sin subtareas | `moveCard(equipoA, Q, DONE, 1)` por un miembro de A | `MOVED`, `pendingCount = 0`; Q en `DONE` |
-| Una subtarea pendiente (AC-ARB-07.1) | P en `IN_PROGRESS` con S1 en `DONE` y S2 en `IN_PROGRESS` | `moveCard(equipoA, P, DONE, 1)` | `BLOCKED`, `pendingCount = 1`; P sigue en `IN_PROGRESS`; sin evento |
-| Varias pendientes (AC-ARB-07.3) | P con 5 subtareas: 3 en `DONE`, 1 en `TO_DO` y 1 en `IN_PROGRESS` | `moveCard(equipoA, P, DONE, 1)` | `BLOCKED`, `pendingCount = 2`; P no cambia |
-| Terminar la última subtarea no mueve al padre (RN-13) | P en `IN_PROGRESS` con una sola subtarea S en `IN_PROGRESS` | `moveCard(equipoA, S, DONE, 1)` | `MOVED` para S; P sigue en `IN_PROGRESS` |
-| Destino distinto de *Hecho* | P con S1 en `TO_DO`, P en `TO_DO` | `moveCard(equipoA, P, IN_PROGRESS, 1)` | `MOVED`; la regla RN-12 no se aplica |
-| Petición directa sin permiso (AC-ARB-07.4) | Un usuario que no es miembro del equipo A | `moveCard(equipoA, P, DONE, 1)` | `ACCESS_DENIED`; P no cambia |
-| Tarjeta de otro equipo | Usuario miembro de A; la tarjeta X es del equipo B | `moveCard(equipoA, X, DONE, 1)` | `CARD_NOT_FOUND`; X no cambia |
-| Columna inexistente | Cualquier tarjeta | `moveCard(equipoA, P, "ARCHIVADA", 1)` | `INVALID_INPUT`; P no cambia |
+| Sin subtareas pendientes | P en `IN_PROGRESS` con S1 en `DONE` | `moveCard(equipoA, P, DONE, 1)` | `success()`; P en `DONE` |
+| Con subtareas pendientes | P con S1 en `DONE` y S2 en `TO_DO` | `moveCard(equipoA, P, DONE, 1)` | `blocked(1)`; P no cambia; `updateColumn` no se invoca |
+| Destino distinto de *Hecho* | P con S1 en `TO_DO` | `moveCard(equipoA, P, IN_PROGRESS, 1)` | `success()`; `findDirectSubtasks` no se invoca |
+| Tarjeta de otro equipo | La tarjeta X es del equipo B | `moveCard(equipoA, X, DONE, 1)` | Falla con `CARD_NOT_FOUND`; X no cambia |
+
+### 3.3 `TeamMembership.findMembership`
+
+| Element | Specification |
+|---|---|
+| **Operation and purpose** | `findMembership`, capacidad que provee el Módulo Users mediante la interfaz `TeamMembership` (Cambio C4). Responde si un usuario pertenece a un equipo y, si pertenece, cuál es su membresía. |
+| **Input** (parameters and types) | `userId : String`; `teamId : String`. |
+| **Output** (successful result and data structure) | `String` con el `membresiaId` (`Membresia.id`) del usuario en el equipo, o **ausente** si no tiene membresía. Devuelve la membresía y no un verdadero o falso porque otros casos de uso la necesitan (por ejemplo, el autor de un mensaje en CU-12). |
+| **Preconditions** (what the caller must satisfy before invoking) | `userId` y `teamId` tienen formato válido. `userId` es el de la sesión del solicitante (A-2), nunca un valor enviado por el cliente. |
+| **Postconditions** (what is guaranteed on successful completion) | Si devuelve un `membresiaId`, existe una `Membresia` con `usuario_id = userId` y `equipo_id = teamId`. Si devuelve ausente, no existe. No se modifica ningún dato. |
+| **Failure outcomes** (each failure, and what state is left after it) | Ninguno de dominio: que el usuario no sea miembro es un resultado normal (ausente), no un fallo. Quien la invoca lo traduce a `ACCESS_DENIED`. Un usuario o equipo inexistente también devuelve ausente, de modo que no se revela si existen. |
+| **Invariants and side effects** (what must stay true, what may change) | **Invariantes.** Devuelve como máximo una membresía, porque un usuario tiene una sola por equipo (RN-02). Solo lee las tablas del Módulo Users, que es su dueño (Sección 2.3).<br>**Efectos secundarios.** Ninguno (solo lectura). |
+
+**Testable examples**
+
+| Case | Before | Request | Expected |
+|---|---|---|---|
+| Usuario miembro | `ana` es miembro del equipo A | `findMembership(ana, equipoA)` | El `membresiaId` de `ana` en A |
+| Usuario no miembro | `luis` no es miembro de A | `findMembership(luis, equipoA)` | Ausente |
+| Equipo inexistente | No existe el equipo Z | `findMembership(ana, equipoZ)` | Ausente |
+
+### 3.4 `CardRepository.findById`
+
+| Element | Specification |
+|---|---|
+| **Operation and purpose** | `findById`, ofrecida por `CardRepository` (Cambio C3). Busca una tarjeta por su identificador dentro de un equipo. Es la única operación del repositorio que recibe `teamId`: las demás actúan sobre una tarjeta que esta ya comprobó que es del equipo. |
+| **Input** (parameters and types) | `teamId : String`; `cardId : String`. |
+| **Output** (successful result and data structure) | `Card` con `id`, `teamId`, `column` y `position` (los atributos de D1 §3.2, equivalentes a `Tarjeta.id`, `equipo_id`, `columna` y `posicion`), o **ausente**. |
+| **Preconditions** (what the caller must satisfy before invoking) | `teamId` y `cardId` tienen formato válido. La membresía del solicitante ya fue comprobada. |
+| **Postconditions** (what is guaranteed on successful completion) | Si devuelve una `Card`, su `teamId` es igual al `teamId` pedido. Si devuelve ausente, no hay en ese equipo ninguna tarjeta con ese identificador. No se modifica ningún dato. |
+| **Failure outcomes** (each failure, and what state is left after it) | Ninguno de dominio: una tarjeta inexistente es un resultado normal (ausente); `CardMoveService.moveCard` lo traduce a `CARD_NOT_FOUND`. Una tarjeta que existe en otro equipo también devuelve ausente, de modo que no se distingue de una inexistente. |
+| **Invariants and side effects** (what must stay true, what may change) | **Invariantes.** I-4 (RN-01, RN-06): la consulta filtra siempre por `teamId` y por el identificador de la tarjeta.<br>**Efectos secundarios.** Ninguno (solo lectura). |
+
+**Testable examples**
+
+| Case | Before | Request | Expected |
+|---|---|---|---|
+| Tarjeta del equipo | P pertenece al equipo A | `findById(equipoA, P)` | La `Card` P con `teamId = equipoA` |
+| Tarjeta de otro equipo | X pertenece al equipo B | `findById(equipoA, X)` | Ausente |
+| Tarjeta inexistente | No existe la tarjeta W | `findById(equipoA, W)` | Ausente |
+
+### 3.5 `CardRepository.findDirectSubtasks`
+
+| Element | Specification |
+|---|---|
+| **Operation and purpose** | `findDirectSubtasks`, ofrecida por `CardRepository`. Lee las subtareas directas de una tarjeta, es decir, las tarjetas cuyo padre es `cardId` (`Tarjeta.padre_id = cardId`). |
+| **Input** (parameters and types) | `cardId : String`. No recibe `teamId`: la tarjeta ya fue comprobada como del equipo por `findById`. |
+| **Output** (successful result and data structure) | `List<Card>` con las subtareas directas, cada una con su columna actual. Lista vacía si la tarjeta no tiene subtareas. No garantiza un orden. |
+| **Preconditions** (what the caller must satisfy before invoking) | `cardId` corresponde a una tarjeta que `findById` devolvió para el equipo del solicitante. |
+| **Postconditions** (what is guaranteed on successful completion) | La lista contiene únicamente tarjetas cuyo padre es `cardId`, sin nietas ni niveles inferiores (Open Question 3 del REQ: se evalúa solo el nivel directo). Refleja el estado de cada subtarea al momento de leer. No se modifica ningún dato. |
+| **Failure outcomes** (each failure, and what state is left after it) | Ninguno de dominio: no tener subtareas devuelve una lista vacía, y eso equivale a 0 pendientes. |
+| **Invariants and side effects** (what must stay true, what may change) | **Invariantes.** Las subtareas son del mismo equipo que su padre (RN-06), así que la lectura no expone tarjetas de otros equipos. La lectura y el guardado posterior (`updateColumn`) forman una sola operación atómica (OQ-4).<br>**Efectos secundarios.** Ninguno (solo lectura). |
+
+**Testable examples**
+
+| Case | Before | Request | Expected |
+|---|---|---|---|
+| Padre con dos subtareas | P tiene S1 y S2; S1 tiene la hija N | `findDirectSubtasks(P)` | Lista con S1 y S2; no incluye a N |
+| Tarjeta sin subtareas | Q no tiene subtareas | `findDirectSubtasks(Q)` | Lista vacía |
+
+### 3.6 `CompletionRule.countPending`
+
+| Element | Specification |
+|---|---|
+| **Operation and purpose** | `countPending`, ofrecida por `CompletionRule` (RN-12). Decide cuántas subtareas impiden cerrar una tarjeta. No consulta la base de datos: recibe las subtareas y devuelve un número. |
+| **Input** (parameters and types) | `subtasks : List<Card>`. |
+| **Output** (successful result and data structure) | `Integer` mayor o igual que 0: el número de tarjetas de la lista para las que `isDone()` es falso (columna `TO_DO` o `IN_PROGRESS`). |
+| **Preconditions** (what the caller must satisfy before invoking) | La lista no es nula. Es la que devolvió `findDirectSubtasks`; puede estar vacía. |
+| **Postconditions** (what is guaranteed on successful completion) | El resultado es 0 si y solo si todas las tarjetas de la lista están en *Hecho* o la lista está vacía. El resultado no supera el tamaño de la lista. La lista y las tarjetas no se modifican. |
+| **Failure outcomes** (each failure, and what state is left after it) | Ninguno de dominio. Una lista nula incumple la precondición y su comportamiento no está definido. |
+| **Invariants and side effects** (what must stay true, what may change) | **Invariantes.** Es una función pura: la misma lista da siempre el mismo número. Solo pregunta `Card.isDone()`, sin comparar columnas, de modo que si cambia qué cuenta como pendiente (Open Question 3 del REQ) solo se toca esta clase. Se puede probar sin base de datos (RNF-MAN-02).<br>**Efectos secundarios.** Ninguno. |
+
+**Testable examples**
+
+| Case | Before | Request | Expected |
+|---|---|---|---|
+| Lista vacía | — | `countPending([])` | 0 |
+| Todas terminadas | S1 y S2 en `DONE` | `countPending([S1, S2])` | 0 |
+| Mezcla (AC-ARB-07.3) | 3 en `DONE`, 1 en `TO_DO` y 1 en `IN_PROGRESS` | `countPending(las 5)` | 2 |
+
+### 3.7 `CardRepository.updateColumn`
+
+| Element | Specification |
+|---|---|
+| **Operation and purpose** | `updateColumn`, ofrecida por `CardRepository` (Cambio C3). Guarda la columna y la posición de una tarjeta. Es una escritura sin reglas: no comprueba RN-12, eso lo decide `CardMoveService` antes de llamarla. |
+| **Input** (parameters and types) | `cardId : String`; `column : Column`; `position : Integer`. |
+| **Output** (successful result and data structure) | Ninguno (`void`). |
+| **Preconditions** (what the caller must satisfy before invoking) | La tarjeta existe en el equipo del solicitante (`findById` ya la devolvió). `position` es válida (OQ-5). Si `column` es `DONE`, la regla RN-12 ya se evaluó con resultado 0 pendientes dentro de la misma operación atómica. |
+| **Postconditions** (what is guaranteed on successful completion) | `Tarjeta.columna` y `Tarjeta.posicion` de `cardId` valen `column` y `position`, y el cambio persiste (RNF-CON-02). |
+| **Failure outcomes** (each failure, and what state is left after it) | Ninguno de dominio definido. Que la tarjeta no exista incumple la precondición y su comportamiento no está definido; esa comprobación es de `findById`. |
+| **Invariants and side effects** (what must stay true, what may change) | **Invariantes.** I-2 (RN-13): solo cambian la columna y la posición de `cardId`; no toca el padre ni otras tarjetas (el posible reacomodo de las demás posiciones es OQ-5). `column` es uno de los tres valores permitidos (RF-KAN-01).<br>**Efectos secundarios.** Una escritura en la persistencia de datos estructurados. |
+
+**Testable examples**
+
+| Case | Before | Request | Expected |
+|---|---|---|---|
+| Guardar columna y posición | P en `TO_DO`, posición 3 | `updateColumn(P, IN_PROGRESS, 1)` | P en `IN_PROGRESS`, posición 1; al recargar sigue ahí |
 
 ---
 
@@ -460,11 +618,11 @@ El ER del equipo no define restricciones más allá de las claves y las notas de
 
 | Check | Result |
 |---|---|
-| Every participant in a sequence diagram is an actor, a component, a class or an external system from Deliverable 1 | **Sí, con una incorporación.** *Miembro* (actor *User* de D1), *Aplicación web*, *Módulo Users*, *Módulo Com.* y *Persistencia de datos estructurados* son componentes de D1 §2.2; `CardMoveService`, `CardRepository` y `CompletionRule` son clases de D1 §3.2; *Aplicación web de otros miembros* es otra instancia del mismo componente. `BoardController` no existía como clase: se agrega a D1 (Cambio C1). Que Com. cubra el chat es un supuesto por confirmar (A-1, Cambio C5). |
-| Every message corresponds to a capability, operation or contract | **Sí.** Las operaciones de D1 se reutilizan sin cambio de nombre (a `moveCard` y `updateColumn` solo se les agrega `position`, C2 y C3): `findDirectSubtasks`, `countPending`, `updateColumn`, `MoveResult.success/blocked`. Las nuevas (`moveCard` del controlador, `findById`, `findMembership`, `sendMessage`) están dadas de alta en los Cambios C1 a C5 y la primera es la del contrato de la Sección 3. |
+| Every participant in a sequence diagram is an actor, a component, a class or an external system from Deliverable 1 | **Sí, con una incorporación.** *Miembro* (actor *User* de D1), *Aplicación web*, *Módulo Users*, *Módulo Com.* y *Persistencia de datos estructurados* son componentes de D1 §2.2; `CardMoveService`, `CardRepository` y `CompletionRule` son clases de D1 §3.2; *Aplicación web de otros miembros* es otra instancia del mismo componente. `BoardController` no existía como clase: se agrega a D1 (Cambios C1 y C8). Que Com. cubra el chat es un supuesto por confirmar (A-1, Cambio C5). |
+| Every message corresponds to a capability, operation or contract | **Sí.** Las operaciones de D1 se reutilizan sin cambio de nombre (a `moveCard` y `updateColumn` solo se les agrega `position`, C2 y C3): `findDirectSubtasks`, `countPending`, `updateColumn`, `MoveResult.success/blocked`. Las nuevas (`requestMoveCard` del controlador, `findById`, `findMembership`, `sendMessage`) están dadas de alta en los Cambios C1 a C5 y C8. Las siete operaciones del diagrama 1.1 (`requestMoveCard`, `moveCard`, `findMembership`, `findById`, `findDirectSubtasks`, `countPending`, `updateColumn`) tienen su contrato en la Sección 3. |
 | Every entity or document type is reflected in the class diagrams, or the reason it is not is stated | **Parcial, con razón.** `Tarjeta` ↔ `Card` (`padre_id` ↔ asociación `parent`, `columna` ↔ `column : Column`, `equipo_id` ↔ `teamId`, `posicion` ↔ `position`; los atributos nuevos entran por C3). Las otras 17 entidades no aparecen en clases porque D1 detalla un solo componente, el Módulo Dashboard, por indicación del profesor; las clases de Users y Com. no se han diseñado. |
 | Every persisted information element has exactly one authoritative owner | **Sí, con dos pendientes declarados.** Cada tabla tiene un solo módulo dueño (Sección 2.3). La sesión (2.1) aún no tiene dueño ni almacén (OQ-1) y falta confirmar el dueño de `Rol` y `MembresiaRol` (OQ-8). |
-| The contract agrees with the sequence diagram and with the data model (same behavior in all three views) | **Sí.** El contrato de `moveCard` tiene los mismos tres fallos y los dos resultados que el diagrama 1.1 (`INVALID_INPUT`, `ACCESS_DENIED`, `CARD_NOT_FOUND`, `MOVED`, `BLOCKED`); el filtro por `teamId` y la columna de tres valores coinciden con `Tarjeta` en la Sección 2.2; la regla de pendientes cuenta subtareas por `padre_id` y `columna`, que son atributos del modelo, y `position` es `Tarjeta.posicion`. La membresía que devuelve `findMembership` es la que se guarda como `Mensaje.membresia_autor_id`. |
+| The contract agrees with the sequence diagram and with the data model (same behavior in all three views) | **Sí.** El contrato de `requestMoveCard` (3.1) tiene los mismos tres fallos y los dos resultados que el diagrama 1.1 (`INVALID_INPUT`, `ACCESS_DENIED`, `CARD_NOT_FOUND`, `MOVED`, `BLOCKED`); el filtro por `teamId` y la columna de tres valores coinciden con `Tarjeta` en la Sección 2.2; la regla de pendientes cuenta subtareas por `padre_id` y `columna`, que son atributos del modelo, y `position` es `Tarjeta.posicion`. La membresía que devuelve `findMembership` es la que se guarda como `Mensaje.membresia_autor_id`. |
 
 **Changes made to Deliverable 1 because of this deliverable**
 
@@ -475,8 +633,9 @@ El ER del equipo no define restricciones más allá de las claves y las notas de
 | C3 | Agregar `CardRepository.findById(teamId, cardId) Card` el atributo `teamId` y el atributo `position` en `Card`, y el parámetro `position` en `CardRepository.updateColumn(cardId, column, position)`; el pseudocódigo comienza con esa búsqueda y falla con `CARD_NOT_FOUND`. | §3.2, §3.4 | Sin ella no hay forma de saber de qué equipo es la tarjeta ni de rechazar una tarjeta inexistente o ajena. |
 | C4 | Nueva capacidad **provista** por el Módulo Users, `findMembership(userId, teamId)`, y **requerida** por Dashboard y Com. Devuelve la membresía (no solo verdadero o falso) porque `Mensaje.membresia_autor_id` la necesita. En el diagrama de clases aparece como la interfaz `TeamMembership`. | §2.2 tabla de componentes (filas Users, Dashboard y Com.), §3.2 | D1 §3.4 suponía un *guard* sin decir quién le da la información. La membresía es dato del Módulo Users (Sección 2.3), así que debe pedirse a Users. El diagrama de tres capas no cambia (sin flechas entre módulos, como pidió el profesor); la dependencia queda en la tabla. |
 | C5 | El Módulo Com. pasa de «llamadas y envío de correo (confirmar si incluye chat)» a **chat (canales y mensajes) y envío de correo**, con la capacidad `sendMessage`. Requiere persistencia y `findMembership`. **Por confirmar por el equipo (A-1).** | §2.2 tabla de componentes (fila Com.) | CU-12 necesita un dueño para `Canal` y `Mensaje`, y Com. es el único módulo cuyo nombre lo permite. |
-| C6 | Se actualizó la tabla de trazabilidad de D1 §6 para incluir CU-12 y los requisitos RN-01, RNF-SEG-02 y RF-KAN-05 (notificación del movimiento a los demás clientes). | D1 §6 | La secuencia de CU-12 y la operación BoardController deben quedar trazadas a sus requisito
+| C6 | Se actualizó la tabla de trazabilidad de D1 §6 para incluir CU-12 y los requisitos RN-01, RNF-SEG-02 y RF-KAN-05 (notificación del movimiento a los demás clientes). | D1 §6 | La secuencia de CU-12 y la operación `BoardController.requestMoveCard` deben quedar trazadas a sus requisitos. |
 | C7 | Sin cambio: D1 §3.4 (supuesto 2) dice que un movimiento rechazado no se avisa a los demás clientes; se mantiene (A-5). | — | El diagrama 1.1 es coherente con eso. |
+| C8 | La primera llamada del diagrama 1.1 (aplicación web → `BoardController`) deja de llamarse `moveCard` y pasa a `BoardController.requestMoveCard(teamId, cardId, targetColumn, position, userId)`: tiene los mismos parámetros que `CardMoveService.moveCard` más `userId`, y hace la verificación inicial (entrada y membresía). `CardMoveService.moveCard` no cambia. Se agrega el pseudocódigo de `requestMoveCard` y el contrato de las siete operaciones (Sección 3). | §2.2 tabla de componentes (fila Dashboard), §3.2, §3.3, §3.4, §6, §8 | El diagrama usaba el mismo nombre para dos operaciones distintas: la que verifica a quien solicita y la que aplica la regla de cierre. Con nombres distintos cada una tiene un solo contrato. |
 
 ---
 
@@ -485,7 +644,7 @@ El ER del equipo no define restricciones más allá de las claves y las notas de
 **Supuestos adoptados en este documento**
 
 - **A-1.** El Módulo Com. incluye canales y mensajes (CU-10 a CU-13) además de las llamadas y el correo. D1 lo dejaba «por confirmar».
-- **A-2.** Cuando una operación llega al servidor, la sesión ya fue verificada y se conoce el `userId`; la verificación de sesión (CU-02, CU-03) es capacidad del Módulo Users y no se detalla aquí.
+- **A-2.** Cuando una operación llega al servidor, la sesión ya fue verificada y se conoce el `userId`; la verificación de sesión (CU-02, CU-03) es capacidad del Módulo Users y no se detalla aquí. Ese `userId` es el que el servidor pasa como parámetro a `BoardController.requestMoveCard`; si el cliente envía uno en el cuerpo de la petición, se ignora, porque aceptarlo permitiría suplantar a otro miembro.
 - **A-3.** El servidor se ejecuta como una sola instancia (SRS §2.5), por lo que las conexiones por canal y por tablero viven en la memoria del canal de eventos (Socket.IO) y no necesitan Redis.
 - **A-4.** Los fallos `CARD_NOT_FOUND` y `CHANNEL_NOT_FOUND` no están en los casos de uso; se derivan de RN-01 y RNF-SEG-02 (no operar sobre recursos de otro equipo) y de que un identificador puede ser inexistente.
 - **A-5.** Mientras espera la respuesta, la aplicación web solo mueve la tarjeta de forma visual en el cliente que arrastró; los demás clientes cambian solamente al recibir el evento del servidor. Por eso un movimiento rechazado no necesita avisarse a los demás.
@@ -516,10 +675,12 @@ El ER del equipo no define restricciones más allá de las claves y las notas de
 
 - [x] Two use cases from the project, each traceable to a Use Case written in the requirements (CU-19 y CU-12).
 - [x] Each sequence diagram shows the main flow and at least one alternative or exception flow.
-- [x] No business behavior is invented: anything unspecified is marked as an assumption or Open Question (A-1 a A-6, OQ-1 a OQ-8).
+- [x] No business behavior is invented: anything unspecified is marked as an assumption or Open Question (A-1 a A-6, OQ-1 a OQ-10).
 - [x] Section 2.1 explains what is NOT persisted as well as what is.
 - [x] The data model has identifiers, relationships and constraints, not only boxes.
 - [x] Every piece of principal information has one authoritative owner, and consumers are listed (Section 2.3); la sesión y el dueño de `Rol` y `MembresiaRol` quedan como pendientes declarados (OQ-1, OQ-8).
-- [x] The contract defines input, output, preconditions, postconditions and failure outcomes.
+- [x] The contract defines input, output, preconditions, postconditions and failure outcomes. *(Sección 3: siete contratos, uno por cada operación del diagrama 1.1).*
+- [x] Los diagramas de secuencia 1.1 y 1.2 muestran las barras de activación de cada participante, y cada barra abierta se cierra (validado con el analizador de Mermaid).
+- [x] Cada nombre de operación y cada parámetro coinciden en el diagrama 1.1, la Sección 3, la tabla de cambios y Deliverable 1 (§3.2 a §3.4).
 - [x] Sequence, data model and contract describe the same behavior.
 - [x] Diagrams render correctly on GitHub (or the exported images are embedded).
