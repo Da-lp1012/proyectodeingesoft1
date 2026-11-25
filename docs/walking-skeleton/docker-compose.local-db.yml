@@ -1,0 +1,25 @@
+# SOLO para pruebas locales: agrega un Postgres temporal. NO se usa en la VM.
+# Uso: docker compose -f docker-compose.yml -f docker-compose.local-db.yml up --build
+# (en el .env local: DB_HOST=db y DB_PORT=5432)
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      # $$ evita que Compose interpole la variable; la expande el shell del contenedor.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  api:
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

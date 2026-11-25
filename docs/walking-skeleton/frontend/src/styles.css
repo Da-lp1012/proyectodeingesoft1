@@ -1,0 +1,223 @@
+/* Desktop primero: cabecera arriba, barra lateral con el estado y área principal.
+   Solo por debajo de 800px se apila todo en una columna. */
+:root {
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --text: #1f2430;
+  --muted: #6b7280;
+  --border: #e2e5ea;
+  --accent: #4f46e5;
+  --ok: #16a34a;
+  --bad: #dc2626;
+  --wait: #d97706;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Rejilla de página: la cabecera ocupa todo el ancho; debajo, lateral fijo + contenido flexible. */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'topbar  topbar'
+    'sidebar content';
+  min-height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin: 0 0 16px;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+/* Cabecera */
+.topbar {
+  grid-area: topbar;
+  padding: 20px 32px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Barra lateral */
+.sidebar {
+  grid-area: sidebar;
+  padding: 32px 24px;
+  border-right: 1px solid var(--border);
+}
+
+.status-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-up .status-dot {
+  background: var(--ok);
+}
+.status-down .status-dot {
+  background: var(--bad);
+}
+.status-checking .status-dot {
+  background: var(--wait);
+}
+
+.status-name {
+  font-weight: 600;
+}
+
+.status-label {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* Área principal */
+.content {
+  grid-area: content;
+  padding: 32px;
+  min-width: 0; /* deja que el contenido se encoja dentro de la rejilla */
+}
+
+/* Formulario: en una sola fila con el botón al lado del campo */
+.item-form {
+  display: flex;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.item-form input {
+  flex: 1;
+}
+
+input[type='text'] {
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: inherit;
+}
+
+input[type='text']:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  margin: 8px 0 0;
+  color: var(--bad);
+}
+
+/* Lista: filas anchas con título a la izquierda y fecha a la derecha */
+.item-list {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.item-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.item-title {
+  overflow-wrap: anywhere;
+}
+
+.item-list time,
+.empty {
+  font-size: 0.875rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Ventanas angostas: se apila todo en una columna */
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'topbar'
+      'sidebar'
+      'content';
+  }
+
+  .topbar,
+  .sidebar,
+  .content {
+    padding: 16px;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .status-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
