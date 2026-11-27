@@ -1,0 +1,48 @@
+# Walking skeleton: web -> api -> base de datos REMOTA (la de la VM).
+# La base NO se levanta aquí; la API se conecta con las variables del .env.
+# Orden de arranque (lo garantizan los healthchecks): api (healthy) -> web
+name: g2-team-4 # evita choques de nombres con otros equipos en el mismo Docker
+
+services:
+  api:
+    build: ./backend
+    environment:
+      DB_HOST: ${DB_HOST:?Falta DB_HOST en el archivo .env}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:?Falta DB_NAME en el archivo .env}
+      DB_USER: ${DB_USER:?Falta DB_USER en el archivo .env}
+      DB_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en el archivo .env}
+      PORT: 3000
+    # Plan B si la base está en la misma VM: usar DB_HOST=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Código montado desde la máquina para el hot-reload.
+      - ./backend:/app
+      # Volumen anónimo: conserva el node_modules instalado durante el build de la imagen.
+      - /app/node_modules
+    ports:
+      # Solo accesible desde la propia máquina (127.0.0.1); el navegador usa el proxy del frontend.
+      - "127.0.0.1:${API_PORT:-3000}:3000"
+    healthcheck:
+      # 127.0.0.1 en vez de localhost: en Alpine "localhost" puede resolver a ::1 (IPv6).
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  web:
+    build: ./frontend
+    environment:
+      # El proxy de Vite corre dentro del contenedor web, así que apunta al servicio api.
+      API_PROXY_TARGET: http://api:3000
+      WATCH_POLLING: ${WATCH_POLLING:-false}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    depends_on:
+      api:
+        condition: service_healthy
