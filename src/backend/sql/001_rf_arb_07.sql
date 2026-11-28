@@ -14,7 +14,7 @@
 --
 -- Nota de alcance: este script SOPORTA la regla RN-12 (relacion padre-hijo +
 -- estado indexados para poder consultar subtareas directas), pero NO la
--- implementa.
+-- implementa."No cerrar un padre con hijos abiertos" es logica de servidor
 -- (ADR 0003, tarea T2.1 de David), no una restriccion de la base de datos.
 -- =============================================================================
 
