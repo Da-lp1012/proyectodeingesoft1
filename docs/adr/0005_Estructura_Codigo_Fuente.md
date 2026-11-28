@@ -1,12 +1,14 @@
 # ADR 0005: Ubicación y estructura del código fuente
 
 * **Estado:** Propuesto
-* **Fecha:** 2026-11-25
+* **Fecha:** 2026-11-25 (revisado 2026-11-26)
 * **Autores:** David Esteban Raigosa Socha  
 &emsp; &emsp; &ensp; &nbsp; Deisy Viviana Lara Sisa  
 &emsp; &emsp; &ensp; &nbsp; Hare Zeiyiukuin Atehortua Rincon  
 &emsp; &emsp; &ensp; &nbsp; Fredy Humberto Garzon Salgado  
 &emsp; &emsp; &ensp; &nbsp; Silvana Ramìrez Ardila
+
+> **Revisión 2026-11-26:** la carpeta contenedora del código pasó de `src/` a `app/`. El nombre `src/` resultaba confuso junto al `src/` interno de NestJS (`src/backend/src/...`); con `app/` la ruta queda `app/backend/src/...`, sin repetir la palabra. Este documento ya refleja `app/`.
 
 ## Contexto
 
@@ -16,11 +18,11 @@ Al iniciar la implementación de `RF-ARB-07` y los demás módulos, el equipo ne
 
 ## Decisión
 
-El código fuente de la aplicación vive bajo una carpeta `src/` en la raíz del repositorio, con esta estructura:
+El código fuente de la aplicación vive bajo una carpeta `app/` en la raíz del repositorio, con esta estructura:
 
 ```
 proyectodeingesoft1/
-├── src/
+├── app/
 │   ├── backend/                 # API NestJS (Node 22 + TypeScript)
 │   ├── frontend/                # Aplicación web React + Vite + TypeScript
 │   ├── docker-compose.yml       # api + web contra la base del equipo
@@ -32,30 +34,31 @@ proyectodeingesoft1/
 └── README_LICENSE.md
 ```
 
-El contenido de `src/` se inicializó **copiando** el walking skeleton desde `docs/walking-skeleton/`. Los `Dockerfile` de cada subproyecto permanecen en `src/backend/` y `src/frontend/`; el `docker-compose.yml` los referencia con rutas relativas (`build: ./backend`), que no cambian al vivir todo bajo `src/`.
+El contenido de `app/` se inicializó **copiando** el walking skeleton desde `docs/walking-skeleton/`. Los `Dockerfile` de cada subproyecto permanecen en `app/backend/` y `app/frontend/`; el `docker-compose.yml` los referencia con rutas relativas (`build: ./backend`), que no cambian al vivir todo bajo `app/`.
 
-`docs/walking-skeleton/` **no se elimina**: queda como registro del artefacto entregado. La fuente de verdad para desarrollar es `src/`; si ambas difieren, prevalece `src/`.
+`docs/walking-skeleton/` **no se elimina**: queda como registro del artefacto entregado. La fuente de verdad para desarrollar es `app/`; si ambas difieren, prevalece `app/`.
 
 Cada módulo funcional del backend sigue el patrón del esqueleto (`model` → `repository` → `service` → `controller`) y la convención de nombres del ADR 0004.
 
 ## Alternativas consideradas
 
 * **Dejar el código en `docs/walking-skeleton/` y trabajar ahí (extenderlo in situ):** se descartó porque mezcla código ejecutable con la carpeta de documentación y hace que `docs/` deje de ser solo material escrito revisable.
-* **Colocar `backend/` y `frontend/` directamente en la raíz, sin carpeta contenedora:** es válido y funciona con el mismo `docker-compose`, pero se prefirió `src/` para separar con un único contenedor el código de la aplicación de la configuración del repositorio (README, licencia, `docs/`).
+* **Colocar `backend/` y `frontend/` directamente en la raíz, sin carpeta contenedora:** es válido y funciona con el mismo `docker-compose`, pero se prefirió `app/` para separar con un único contenedor el código de la aplicación de la configuración del repositorio (README, licencia, `docs/`).
+* **Usar `src/` como carpeta contenedora:** fue la primera decisión (2026-11-25), pero se cambió a `app/` (2026-11-26) porque `src/` se confundía con el `src/` interno de NestJS, dejando la ruta repetida `src/backend/src/...`.
 * **Mover el código a un repositorio nuevo:** se descartó porque parte el proyecto en dos repos, complica el despliegue en la VM compartida y rompe la trazabilidad entre el diseño (`docs/`) y el código.
 * **Mover (no copiar) el walking skeleton con `git mv`:** se descartó porque se decidió conservar `docs/walking-skeleton/` como artefacto de la entrega; copiar mantiene ambos.
 
 ## Consecuencias
 
 * **Positivas:**
-  * `docs/` vuelve a contener solo documentación; el código vivo queda en `src/`.
-  * Los cinco integrantes crean sus módulos bajo una misma ruta conocida (`src/backend/src/modules/`), evitando archivos duplicados y conflictos de merge.
+  * `docs/` vuelve a contener solo documentación; el código vivo queda en `app/`.
+  * Los cinco integrantes crean sus módulos bajo una misma ruta conocida (`app/backend/src/modules/`), evitando archivos duplicados y conflictos de merge.
   * No se tocan los `Dockerfile` ni las rutas del `docker-compose`; el despliegue en la VM funciona igual.
   * Se conserva el walking skeleton original como evidencia de la entrega de diseño.
 
 * **Negativas / Riesgos:**
-  * El código queda temporalmente duplicado (en `docs/walking-skeleton/` y en `src/`). Mientras ambos existan, los cambios de desarrollo se hacen **solo** en `src/`; `docs/walking-skeleton/` no se modifica.
-  * La ruta del backend queda algo anidada (`src/backend/src/...`): `src/` del repositorio contiene el subproyecto `backend`, que a su vez tiene su propio `src/` de NestJS.
+  * El código queda temporalmente duplicado (en `docs/walking-skeleton/` y en `app/`). Mientras ambos existan, los cambios de desarrollo se hacen **solo** en `app/`; `docs/walking-skeleton/` no se modifica.
+  * La ruta del backend sigue teniendo una carpeta `src/` interna de NestJS (`app/backend/src/...`), pero ya no se repite el nombre de la carpeta contenedora.
 
 ## Referencias
 
