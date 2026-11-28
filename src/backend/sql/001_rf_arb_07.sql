@@ -3,18 +3,22 @@
 -- Esquema inicial para RF-ARB-07 (bloqueo de cierre de tarjeta padre con
 -- subtareas directas pendientes) y la regla de negocio RN-12.
 --
--- Alcance: Solo las 4 tablas que RF-ARB-07 y las tareas de esta semana
--- (T1.2 CardRepository, T2.1 CardMoveService) necesitan.
+-- Traducido desde: docs/diagramas/02-modelo-entidad-relacion.mmd
+-- Alcance acotado: solo las 4 tablas que RF-ARB-07 y las tareas de esta semana
+-- (T1.2 CardRepository, T2.1 CardMoveService) necesitan. El resto del modelo
+-- entidad-relacion (chat, labels, encuestas, roles, notificaciones) lo crean
+-- los modulos de cada companero, no este ticket.
 --
 -- Convenciones:
---   * PK tipo uuid con gen_random_uuid(). Se respeta el modelo entidad-relacion, que define uuid para
+--   * PK tipo uuid con gen_random_uuid() (nativo en PostgreSQL 16; no requiere
+--     extensiones). Se respeta el modelo entidad-relacion, que define uuid para
 --     todas las entidades (el walking-skeleton de items usaba SERIAL).
 --   * snake_case en tablas y columnas (ADR 0004).
 --   * Script idempotente: CREATE TABLE IF NOT EXISTS, se puede correr varias veces.
 --
 -- Nota de alcance: este script SOPORTA la regla RN-12 (relacion padre-hijo +
 -- estado indexados para poder consultar subtareas directas), pero NO la
--- implementa."No cerrar un padre con hijos abiertos" es logica de servidor
+-- implementa. "No cerrar un padre con hijos abiertos" es logica de servidor
 -- (ADR 0003, tarea T2.1 de David), no una restriccion de la base de datos.
 -- =============================================================================
 
@@ -76,7 +80,11 @@ CREATE TABLE IF NOT EXISTS tarjetas (
                     CHECK (columna IN ('por_hacer', 'en_progreso', 'hecho')),
     posicion        integer      NOT NULL DEFAULT 0,
     fecha_limite    date,
-    color           varchar(20)
+    color           varchar(20),
+    -- Una tarjeta no puede ser su propia madre (ciclo trivial de longitud 1).
+    -- Los ciclos mas largos (A->B->A) NO se cubren aqui; eso es logica de
+    -- servicio (RN-11: el arbol no admite ciclos).
+    CONSTRAINT ck_tarjetas_padre_distinto CHECK (padre_id IS NULL OR padre_id <> id)
 );
 
 -- -----------------------------------------------------------------------------
